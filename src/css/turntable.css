@@ -1,9 +1,18 @@
 /* 转盘样式 */
 
+.turntable-wrapper {
+  width: calc(100vw - 40px);
+  max-width: 500px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
 .turntable-container {
   position: relative;
-  width: 320px;
-  height: 320px;
+  width: 100%;
+  aspect-ratio: 1;
+  max-width: 100%;
 }
 
 .turntable-canvas {
@@ -55,9 +64,8 @@
 
 /* 响应式 */
 @media (max-width: 480px) {
-  .turntable-container {
-    width: 280px;
-    height: 280px;
+  .turntable-wrapper {
+    width: calc(100vw - 30px);
   }
   
   .turntable-center {
@@ -65,12 +73,18 @@
     height: 50px;
     font-size: 20px;
   }
+  
+  .turntable-pointer {
+    border-left: 12px solid transparent;
+    border-right: 12px solid transparent;
+    border-top: 25px solid #f5576c;
+  }
 }
 
 @media (min-width: 769px) {
-  .turntable-container {
-    width: 400px;
-    height: 400px;
+  .turntable-wrapper {
+    width: calc(100vw - 60px);
+    max-width: 450px;
   }
   
   .turntable-center {

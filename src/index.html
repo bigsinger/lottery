@@ -119,14 +119,14 @@
 
         <!-- 黑白名单说明 -->
         <div class="form-group" style="margin-top: 20px;">
-          <label class="form-label">黑白名单</label>
-          <p style="color: #999; font-size: 14px; line-height: 1.6;">
-            💡 黑名单：排除指定奖品，不在抽奖池中出现<br>
-            💡 白名单：只保留指定奖品，其他奖品不参与抽奖<br>
+          <label class="form-label">黑白名单设置</label>
+          <div id="filterListContainer" style="border: 2px solid #e0e0e0; border-radius: 8px; padding: 10px; max-height: 150px; overflow-y: auto;">
+            <!-- 奖品黑白名单勾选列表将通过 JS 动态生成 -->
+          </div>
+          <p style="color: #999; font-size: 12px; margin-top: 8px; line-height: 1.6;">
+            💡 <strong>黑名单</strong>：勾选后该奖品不参与抽奖<br>
+            💡 <strong>白名单</strong>：勾选后仅该奖品参与抽奖（其他不参与）<br>
             💡 白名单优先级高于黑名单
-          </p>
-          <p style="color: #666; font-size: 12px;">
-            （黑白名单功能可在奖品编辑时通过勾选设置，当前版本暂未实现高级配置界面）
           </p>
         </div>
       </div>

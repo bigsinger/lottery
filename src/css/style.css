@@ -74,12 +74,14 @@ body {
   padding-top: 80px;
   width: 100%;
   max-width: 500px;
+  padding-bottom: 20px;
 }
 
 /* 转盘容器 */
 .turntable-wrapper {
   position: relative;
-  margin: 20px 0;
+  width: calc(100vw - 40px);
+  max-width: 450px;
 }
 
 /* 抽奖按钮 */
@@ -119,13 +121,44 @@ body {
 
 /* 响应式设计 */
 @media (max-width: 480px) {
+  body {
+    padding: 10px;
+  }
+  
+  .header {
+    padding: 10px 15px;
+  }
+  
   .title {
-    font-size: 20px;
+    font-size: 18px;
+  }
+  
+  .main-container {
+    padding-top: 70px;
+    max-width: 100%;
+  }
+  
+  .turntable-wrapper {
+    width: calc(100vw - 20px);
+    max-width: 320px;
   }
   
   .draw-btn {
     padding: 12px 40px;
     font-size: 18px;
+    margin-top: 20px;
+  }
+  
+  .mode-indicator {
+    font-size: 12px;
+    padding: 6px 12px;
+  }
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+  .turntable-wrapper {
+    width: calc(100vw - 40px);
+    max-width: 380px;
   }
 }
 

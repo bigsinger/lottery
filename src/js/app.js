@@ -13,6 +13,7 @@ class LotteryApp {
     this.storage = new StorageManager(this.mode);
     this.turntable = null;
     this.config = null;
+    this.resizeTimeout = null;
     
     // DOM 元素引用
     this.elements = {
@@ -75,12 +76,29 @@ class LotteryApp {
     }
     
     this.turntable = new Turntable(this.elements.canvas);
-    this.turntable.draw(this.config.prizes);
+    
+    // 延迟绘制，确保容器尺寸已计算
+    setTimeout(() => {
+      this.turntable.resizeCanvas();
+      this.turntable.draw(this.config.prizes);
+    }, 100);
     
     // 监听窗口大小变化
     window.addEventListener('resize', () => {
-      this.turntable.resizeCanvas();
-      this.turntable.draw(this.config.prizes);
+      // 使用防抖处理
+      clearTimeout(this.resizeTimeout);
+      this.resizeTimeout = setTimeout(() => {
+        this.turntable.resizeCanvas();
+        this.turntable.draw(this.config.prizes);
+      }, 200);
+    });
+    
+    // 监听页面加载完成（确保图片等资源加载后重新计算尺寸）
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        this.turntable.resizeCanvas();
+        this.turntable.draw(this.config.prizes);
+      }, 100);
     });
   }
 
@@ -269,6 +287,9 @@ class LotteryApp {
     
     // 奖品列表
     this.renderPrizeList();
+    
+    // 黑白名单列表
+    this.renderFilterList();
   }
 
   /**
@@ -285,12 +306,18 @@ class LotteryApp {
       prizeItem.className = 'prize-item';
       prizeItem.dataset.id = prize.id;
       
+      // 检查黑白名单状态
+      const isBlacklisted = this.config.blacklist && this.config.blacklist.includes(prize.id);
+      const isWhitelisted = this.config.whitelist && this.config.whitelist.includes(prize.id);
+      const statusBadge = isWhitelisted ? '<span style="color: #2ecc71; font-size: 12px;">[白名单]</span>' : 
+                          isBlacklisted ? '<span style="color: #e74c3c; font-size: 12px;">[黑名单]</span>' : '';
+      
       prizeItem.innerHTML = `
         <div class="prize-color" style="background: ${prize.color || Utils.getDefaultColor(index)}">
           ${prize.icon || ''}
         </div>
         <div class="prize-info">
-          <div class="prize-name">${prize.text}</div>
+          <div class="prize-name">${prize.text} ${statusBadge}</div>
           <div class="prize-weight">权重: ${prize.weight || 1}</div>
         </div>
         <div class="prize-actions">
@@ -301,6 +328,117 @@ class LotteryApp {
       
       prizeListEl.appendChild(prizeItem);
     });
+  }
+
+  /**
+   * 渲染黑白名单列表
+   */
+  renderFilterList() {
+    const filterListEl = document.getElementById('filterListContainer');
+    if (!filterListEl) return;
+    
+    filterListEl.innerHTML = '';
+    
+    this.config.prizes.forEach((prize, index) => {
+      const filterItem = document.createElement('div');
+      filterItem.className = 'filter-item';
+      filterItem.style.cssText = 'display: flex; align-items: center; padding: 8px; gap: 15px; border-bottom: 1px solid #eee;';
+      
+      const isBlacklisted = this.config.blacklist && this.config.blacklist.includes(prize.id);
+      const isWhitelisted = this.config.whitelist && this.config.whitelist.includes(prize.id);
+      
+      filterItem.innerHTML = `
+        <div style="width: 24px; height: 24px; border-radius: 50%; background: ${prize.color || Utils.getDefaultColor(index)}; display: flex; align-items: center; justify-content: center; font-size: 14px;">
+          ${prize.icon || ''}
+        </div>
+        <div style="flex: 1; font-size: 14px;">${prize.text}</div>
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <label style="display: flex; align-items: center; gap: 3px; font-size: 12px; color: #e74c3c;">
+            <input type="checkbox" class="blacklist-checkbox" data-prize-id="${prize.id}" ${isBlacklisted ? 'checked' : ''}>
+            黑名单
+          </label>
+          <label style="display: flex; align-items: center; gap: 3px; font-size: 12px; color: #2ecc71;">
+            <input type="checkbox" class="whitelist-checkbox" data-prize-id="${prize.id}" ${isWhitelisted ? 'checked' : ''}>
+            白名单
+          </label>
+        </div>
+      `;
+      
+      filterListEl.appendChild(filterItem);
+    });
+    
+    // 绑定黑白名单勾选事件
+    filterListEl.querySelectorAll('.blacklist-checkbox').forEach(checkbox => {
+      checkbox.addEventListener('change', (e) => this.handleBlacklistChange(e));
+    });
+    
+    filterListEl.querySelectorAll('.whitelist-checkbox').forEach(checkbox => {
+      checkbox.addEventListener('change', (e) => this.handleWhitelistChange(e));
+    });
+  }
+
+  /**
+   * 处理黑名单勾选变化
+   */
+  handleBlacklistChange(e) {
+    const prizeId = e.target.dataset.prizeId;
+    const isChecked = e.target.checked;
+    
+    if (!this.config.blacklist) {
+      this.config.blacklist = [];
+    }
+    
+    if (isChecked) {
+      // 添加到黑名单，同时从白名单移除
+      if (!this.config.blacklist.includes(prizeId)) {
+        this.config.blacklist.push(prizeId);
+      }
+      this.config.whitelist = this.config.whitelist.filter(id => id !== prizeId);
+      
+      // 取消对应的白名单勾选
+      const whitelistCheckbox = document.querySelector(`.whitelist-checkbox[data-prize-id="${prizeId}"]`);
+      if (whitelistCheckbox) {
+        whitelistCheckbox.checked = false;
+      }
+    } else {
+      // 从黑名单移除
+      this.config.blacklist = this.config.blacklist.filter(id => id !== prizeId);
+    }
+    
+    // 更新奖品列表显示
+    this.renderPrizeList();
+  }
+
+  /**
+   * 处理白名单勾选变化
+   */
+  handleWhitelistChange(e) {
+    const prizeId = e.target.dataset.prizeId;
+    const isChecked = e.target.checked;
+    
+    if (!this.config.whitelist) {
+      this.config.whitelist = [];
+    }
+    
+    if (isChecked) {
+      // 添加到白名单，同时从黑名单移除
+      if (!this.config.whitelist.includes(prizeId)) {
+        this.config.whitelist.push(prizeId);
+      }
+      this.config.blacklist = this.config.blacklist.filter(id => id !== prizeId);
+      
+      // 取消对应的黑名单勾选
+      const blacklistCheckbox = document.querySelector(`.blacklist-checkbox[data-prize-id="${prizeId}"]`);
+      if (blacklistCheckbox) {
+        blacklistCheckbox.checked = false;
+      }
+    } else {
+      // 从白名单移除
+      this.config.whitelist = this.config.whitelist.filter(id => id !== prizeId);
+    }
+    
+    // 更新奖品列表显示
+    this.renderPrizeList();
   }
 
   /**
@@ -471,6 +609,14 @@ class LotteryApp {
     const titleInput = document.getElementById('configTitle');
     if (titleInput) {
       this.config.title = titleInput.value.trim() || '幸运抽奖';
+    }
+    
+    // 确保黑白名单已初始化
+    if (!this.config.blacklist) {
+      this.config.blacklist = [];
+    }
+    if (!this.config.whitelist) {
+      this.config.whitelist = [];
     }
     
     // 保存配置
