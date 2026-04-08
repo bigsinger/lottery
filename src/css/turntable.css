@@ -1,0 +1,81 @@
+/* 转盘样式 */
+
+.turntable-container {
+  position: relative;
+  width: 320px;
+  height: 320px;
+}
+
+.turntable-canvas {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  box-shadow: 
+    0 0 0 10px rgba(255, 255, 255, 0.3),
+    0 0 0 15px rgba(255, 255, 255, 0.1),
+    0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.turntable-pointer {
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 15px solid transparent;
+  border-right: 15px solid transparent;
+  border-top: 30px solid #f5576c;
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.3));
+  z-index: 10;
+}
+
+.turntable-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 24px;
+  z-index: 5;
+}
+
+/* 转盘旋转动画 */
+.turntable-spinning {
+  transition: transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99);
+}
+
+/* 响应式 */
+@media (max-width: 480px) {
+  .turntable-container {
+    width: 280px;
+    height: 280px;
+  }
+  
+  .turntable-center {
+    width: 50px;
+    height: 50px;
+    font-size: 20px;
+  }
+}
+
+@media (min-width: 769px) {
+  .turntable-container {
+    width: 400px;
+    height: 400px;
+  }
+  
+  .turntable-center {
+    width: 80px;
+    height: 80px;
+    font-size: 32px;
+  }
+}

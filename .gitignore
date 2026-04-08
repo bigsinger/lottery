@@ -1,0 +1,14 @@
+# 临时文件
+temp/
+create_dirs.py
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# 日志
+*.log

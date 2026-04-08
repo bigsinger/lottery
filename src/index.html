@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="可配置的转盘抽奖程序，支持个性化设置和多模式切换">
+  <title>幸运抽奖</title>
+  
+  <!-- 样式文件 -->
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/turntable.css">
+  <link rel="stylesheet" href="css/modal.css">
+</head>
+<body>
+  <!-- 头部 -->
+  <header class="header">
+    <div class="header-left">
+      <button class="header-btn" id="helpBtn" title="使用说明">?</button>
+      <button class="header-btn" id="settingBtn" title="设置">⚙</button>
+    </div>
+    <h1 class="title" id="title">幸运抽奖</h1>
+    <div class="mode-indicator" id="modeIndicator">模式: default</div>
+  </header>
+
+  <!-- 主容器 -->
+  <main class="main-container">
+    <!-- 转盘容器 -->
+    <div class="turntable-wrapper">
+      <div class="turntable-container">
+        <!-- 指针 -->
+        <div class="turntable-pointer"></div>
+        <!-- 转盘 Canvas -->
+        <canvas id="turntableCanvas" class="turntable-canvas"></canvas>
+        <!-- 中心装饰 -->
+        <div class="turntable-center">🎯</div>
+      </div>
+    </div>
+
+    <!-- 抽奖按钮 -->
+    <button class="draw-btn" id="drawBtn">开始抽奖</button>
+  </main>
+
+  <!-- 设置弹窗 -->
+  <div class="modal-overlay" id="settingModal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h2 class="modal-title">设置</h2>
+        <button class="modal-close">×</button>
+      </div>
+      <div class="modal-body">
+        <!-- 标题设置 -->
+        <div class="form-group">
+          <label class="form-label">抽奖标题</label>
+          <input type="text" class="form-input" id="configTitle" placeholder="请输入抽奖标题">
+        </div>
+
+        <!-- 奖品列表 -->
+        <div class="form-group">
+          <label class="form-label">奖品列表</label>
+          <div class="prize-list" id="prizeList">
+            <!-- 奖品项将通过 JS 动态生成 -->
+          </div>
+          <button class="add-prize-btn" id="addPrizeBtn">+ 添加奖品</button>
+        </div>
+
+        <!-- 奖品编辑器 -->
+        <div id="prizeEditor" style="display: none; margin-top: 20px; padding: 20px; background: #f5f5f5; border-radius: 8px;">
+          <div class="form-group">
+            <label class="form-label">奖品名称</label>
+            <input type="text" class="form-input" id="prizeName" placeholder="请输入奖品名称">
+          </div>
+          <div class="form-group">
+            <label class="form-label">中奖权重（数值越大概率越高）</label>
+            <input type="number" class="form-input" id="prizeWeight" value="1" min="1">
+          </div>
+          <div class="form-group">
+            <label class="form-label">选择图标</label>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
+              <div id="iconPreview" style="width: 40px; height: 40px; border-radius: 8px; background: #eee; display: flex; align-items: center; justify-content: center; font-size: 24px;"></div>
+              <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                <!-- 图标选项 -->
+                <span class="icon-option" data-icon="🎁" style="cursor: pointer; font-size: 24px; padding: 5px;">🎁</span>
+                <span class="icon-option" data-icon="🏆" style="cursor: pointer; font-size: 24px; padding: 5px;">🏆</span>
+                <span class="icon-option" data-icon="💰" style="cursor: pointer; font-size: 24px; padding: 5px;">💰</span>
+                <span class="icon-option" data-icon="🎫" style="cursor: pointer; font-size: 24px; padding: 5px;">🎫</span>
+                <span class="icon-option" data-icon="🎮" style="cursor: pointer; font-size: 24px; padding: 5px;">🎮</span>
+                <span class="icon-option" data-icon="📱" style="cursor: pointer; font-size: 24px; padding: 5px;">📱</span>
+                <span class="icon-option" data-icon="🍰" style="cursor: pointer; font-size: 24px; padding: 5px;">🍰</span>
+                <span class="icon-option" data-icon="✨" style="cursor: pointer; font-size: 24px; padding: 5px;">✨</span>
+                <span class="icon-option" data-icon="🎈" style="cursor: pointer; font-size: 24px; padding: 5px;">🎈</span>
+                <span class="icon-option" data-icon="🌹" style="cursor: pointer; font-size: 24px; padding: 5px;">🌹</span>
+                <span class="icon-option" data-icon="💎" style="cursor: pointer; font-size: 24px; padding: 5px;">💎</span>
+                <span class="icon-option" data-icon="🎯" style="cursor: pointer; font-size: 24px; padding: 5px;">🎯</span>
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">选择颜色</label>
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <div id="colorPreview" style="width: 40px; height: 40px; border-radius: 8px; background: #e74c3c;"></div>
+              <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                <!-- 颜色选项 -->
+                <span class="color-option" data-color="#e74c3c" style="cursor: pointer; width: 30px; height: 30px; border-radius: 50%; background: #e74c3c;"></span>
+                <span class="color-option" data-color="#e67e22" style="cursor: pointer; width: 30px; height: 30px; border-radius: 50%; background: #e67e22;"></span>
+                <span class="color-option" data-color="#f1c40f" style="cursor: pointer; width: 30px; height: 30px; border-radius: 50%; background: #f1c40f;"></span>
+                <span class="color-option" data-color="#2ecc71" style="cursor: pointer; width: 30px; height: 30px; border-radius: 50%; background: #2ecc71;"></span>
+                <span class="color-option" data-color="#3498db" style="cursor: pointer; width: 30px; height: 30px; border-radius: 50%; background: #3498db;"></span>
+                <span class="color-option" data-color="#9b59b6" style="cursor: pointer; width: 30px; height: 30px; border-radius: 50%; background: #9b59b6;"></span>
+                <span class="color-option" data-color="#1abc9c" style="cursor: pointer; width: 30px; height: 30px; border-radius: 50%; background: #1abc9c;"></span>
+                <span class="color-option" data-color="#34495e" style="cursor: pointer; width: 30px; height: 30px; border-radius: 50%; background: #34495e;"></span>
+              </div>
+            </div>
+          </div>
+          <div style="display: flex; gap: 10px; margin-top: 15px;">
+            <button class="btn btn-primary" id="prizeSaveBtn">保存</button>
+            <button class="btn btn-secondary" id="prizeCancelBtn">取消</button>
+          </div>
+        </div>
+
+        <!-- 黑白名单说明 -->
+        <div class="form-group" style="margin-top: 20px;">
+          <label class="form-label">黑白名单</label>
+          <p style="color: #999; font-size: 14px; line-height: 1.6;">
+            💡 黑名单：排除指定奖品，不在抽奖池中出现<br>
+            💡 白名单：只保留指定奖品，其他奖品不参与抽奖<br>
+            💡 白名单优先级高于黑名单
+          </p>
+          <p style="color: #666; font-size: 12px;">
+            （黑白名单功能可在奖品编辑时通过勾选设置，当前版本暂未实现高级配置界面）
+          </p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="resetConfigBtn">重置</button>
+        <button class="btn btn-primary" id="saveConfigBtn">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 帮助弹窗 -->
+  <div class="modal-overlay" id="helpModal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h2 class="modal-title">使用说明</h2>
+        <button class="modal-close">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="help-content">
+          <h3>📌 基本使用</h3>
+          <ul>
+            <li>点击「开始抽奖」按钮即可进行抽奖</li>
+            <li>转盘会旋转并随机停在某个奖品上</li>
+            <li>抽奖结果会自动显示并保存历史记录</li>
+          </ul>
+
+          <h3>⚙️ 配置设置</h3>
+          <ul>
+            <li>点击右上角「⚙」按钮打开设置面板</li>
+            <li>可以修改抽奖标题</li>
+            <li>可以添加、编辑、删除奖品</li>
+            <li>可以为每个奖品设置中奖权重</li>
+            <li>配置会永久保存在浏览器本地</li>
+          </ul>
+
+          <h3>🎨 奖品设置</h3>
+          <ul>
+            <li><strong>名称</strong>：奖品的显示名称</li>
+            <li><strong>图标</strong>：选择预制图标或留空使用文字</li>
+            <li><strong>颜色</strong>：转盘扇形的背景颜色</li>
+            <li><strong>权重</strong>：数值越大，中奖概率越高</li>
+          </ul>
+
+          <h3>🔄 多模式切换</h3>
+          <ul>
+            <li>通过 URL 参数 <code>?mode=xxx</code> 切换不同抽奖模式</li>
+            <li>每个模式拥有独立的配置存储</li>
+            <li>例如：<code>index.html?mode=team1</code></li>
+            <li>例如：<code>index.html?mode=team2</code></li>
+          </ul>
+
+          <h3>💡 使用技巧</h3>
+          <ul>
+            <li>设置「谢谢参与」奖品权重较高，增加趣味性</li>
+            <li>使用不同模式区分不同场景的抽奖</li>
+            <li>配置会永久保存，下次打开自动加载</li>
+          </ul>
+
+          <h3>⚠️ 注意事项</h3>
+          <ul>
+            <li>配置保存在浏览器本地，清除浏览器数据会丢失</li>
+            <li>至少需要保留一个奖品才能进行抽奖</li>
+            <li>建议使用 Chrome、Firefox、Safari 等现代浏览器</li>
+          </ul>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary modal-close-btn" onclick="app.closeModal(document.getElementById('helpModal'))">知道了</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 结果弹窗 -->
+  <div class="modal-overlay" id="resultModal">
+    <div class="modal-container">
+      <div class="modal-body result-modal">
+        <div class="result-icon">🎉</div>
+        <div class="result-text">恭喜您抽中</div>
+        <div class="result-prize">一等奖</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JavaScript 文件 -->
+  <script src="js/utils.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/turntable.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

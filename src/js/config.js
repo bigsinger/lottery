@@ -1,0 +1,187 @@
+/**
+ * 配置管理模块
+ */
+
+class ConfigManager {
+  /**
+   * 构造函数
+   * @param {string} mode 模式名称
+   */
+  constructor(mode) {
+    this.mode = mode || 'default';
+    this.storage = new StorageManager(this.mode);
+  }
+
+  /**
+   * 获取默认配置
+   * @returns {Object} 默认配置对象
+   */
+  getDefaultConfig() {
+    return {
+      mode: this.mode,
+      title: '幸运抽奖',
+      prizes: [
+        { id: Utils.generateId(), text: '一等奖', icon: '🏆', color: '#e74c3c', weight: 1 },
+        { id: Utils.generateId(), text: '二等奖', icon: '🎁', color: '#e67e22', weight: 2 },
+        { id: Utils.generateId(), text: '三等奖', icon: '🎈', color: '#f1c40f', weight: 3 },
+        { id: Utils.generateId(), text: '谢谢参与', icon: '✨', color: '#95a5a6', weight: 10 }
+      ],
+      blacklist: [],
+      whitelist: [],
+      updatedAt: new Date().toISOString()
+    };
+  }
+
+  /**
+   * 获取配置
+   * @returns {Object} 配置对象
+   */
+  getConfig() {
+    const savedConfig = this.storage.loadConfig();
+    
+    if (savedConfig) {
+      // 验证配置完整性
+      if (this.validateConfig(savedConfig)) {
+        return savedConfig;
+      } else {
+        console.warn('配置数据不完整，使用默认配置');
+        return this.getDefaultConfig();
+      }
+    }
+    
+    return this.getDefaultConfig();
+  }
+
+  /**
+   * 验证配置
+   * @param {Object} config 配置对象
+   * @returns {boolean} 是否有效
+   */
+  validateConfig(config) {
+    // 检查必要字段
+    if (!config.title || typeof config.title !== 'string') {
+      return false;
+    }
+    
+    if (!config.prizes || !Array.isArray(config.prizes) || config.prizes.length === 0) {
+      return false;
+    }
+    
+    // 检查奖品格式
+    for (const prize of config.prizes) {
+      if (!prize.text || typeof prize.text !== 'string') {
+        return false;
+      }
+      if (prize.weight && typeof prize.weight !== 'number') {
+        return false;
+      }
+    }
+    
+    return true;
+  }
+
+  /**
+   * 保存配置
+   * @param {Object} config 配置对象
+   * @returns {boolean} 是否成功
+   */
+  saveConfig(config) {
+    // 验证配置
+    if (!this.validateConfig(config)) {
+      console.error('配置验证失败');
+      return false;
+    }
+    
+    return this.storage.saveConfig(config);
+  }
+
+  /**
+   * 重置配置
+   * @returns {Object} 默认配置
+   */
+  resetConfig() {
+    const defaultConfig = this.getDefaultConfig();
+    this.saveConfig(defaultConfig);
+    return defaultConfig;
+  }
+
+  /**
+   * 清除配置
+   * @returns {boolean} 是否成功
+   */
+  clearConfig() {
+    return this.storage.clearConfig();
+  }
+
+  /**
+   * 添加奖品
+   * @param {Object} config 当前配置
+   * @param {Object} prize 新奖品
+   * @returns {Object} 更新后的配置
+   */
+  addPrize(config, prize) {
+    prize.id = Utils.generateId();
+    if (!prize.color) {
+      prize.color = Utils.getDefaultColor(config.prizes.length);
+    }
+    if (!prize.weight) {
+      prize.weight = 1;
+    }
+    config.prizes.push(prize);
+    return config;
+  }
+
+  /**
+   * 更新奖品
+   * @param {Object} config 当前配置
+   * @param {string} prizeId 奖品 ID
+   * @param {Object} updates 更新内容
+   * @returns {Object} 更新后的配置
+   */
+  updatePrize(config, prizeId, updates) {
+    const index = config.prizes.findIndex(p => p.id === prizeId);
+    if (index !== -1) {
+      config.prizes[index] = { ...config.prizes[index], ...updates };
+    }
+    return config;
+  }
+
+  /**
+   * 删除奖品
+   * @param {Object} config 当前配置
+   * @param {string} prizeId 奖品 ID
+   * @returns {Object} 更新后的配置
+   */
+  deletePrize(config, prizeId) {
+    config.prizes = config.prizes.filter(p => p.id !== prizeId);
+    return config;
+  }
+
+  /**
+   * 应用黑白名单过滤
+   * @param {Object} config 当前配置
+   * @returns {Array} 过滤后的奖品列表
+   */
+  applyFilters(config) {
+    let prizes = [...config.prizes];
+    
+    // 白名单优先：如果设置了白名单，只保留白名单中的奖品
+    if (config.whitelist && config.whitelist.length > 0) {
+      prizes = prizes.filter(p => config.whitelist.includes(p.id));
+    }
+    
+    // 黑名单：排除黑名单中的奖品
+    if (config.blacklist && config.blacklist.length > 0) {
+      prizes = prizes.filter(p => !config.blacklist.includes(p.id));
+    }
+    
+    return prizes;
+  }
+}
+
+// 导出
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = ConfigManager;
+} else {
+  window.ConfigManager = ConfigManager;
+}
