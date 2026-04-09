@@ -1,0 +1,8 @@
+# 禁止直接访问用户配置文件（安全措施）
+<FilesMatch "\.json$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+# 禁止目录列表
+Options -Indexes

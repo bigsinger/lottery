@@ -1,15 +1,18 @@
 /**
  * 配置管理模块
+ * 支持本地存储和服务端存储
  */
 
 class ConfigManager {
   /**
    * 构造函数
+   * @param {string} user 用户标识（可选）
    * @param {string} mode 模式名称
    */
-  constructor(mode) {
+  constructor(user, mode) {
+    this.user = user;
     this.mode = mode || 'default';
-    this.storage = new StorageManager(this.mode);
+    this.storage = new StorageManager(user, mode);
   }
 
   /**
@@ -18,6 +21,7 @@ class ConfigManager {
    */
   getDefaultConfig() {
     return {
+      user: this.user,
       mode: this.mode,
       title: '幸运抽奖',
       prizes: [
@@ -32,10 +36,10 @@ class ConfigManager {
 
   /**
    * 获取配置
-   * @returns {Object} 配置对象
+   * @returns {Promise<Object>} 配置对象
    */
-  getConfig() {
-    const savedConfig = this.storage.loadConfig();
+  async getConfig() {
+    const savedConfig = await this.storage.loadConfig();
     
     if (savedConfig) {
       // 验证配置完整性
@@ -81,34 +85,34 @@ class ConfigManager {
   /**
    * 保存配置
    * @param {Object} config 配置对象
-   * @returns {boolean} 是否成功
+   * @returns {Promise<boolean>} 是否成功
    */
-  saveConfig(config) {
+  async saveConfig(config) {
     // 验证配置
     if (!this.validateConfig(config)) {
       console.error('配置验证失败');
       return false;
     }
     
-    return this.storage.saveConfig(config);
+    return await this.storage.saveConfig(config);
   }
 
   /**
    * 重置配置
-   * @returns {Object} 默认配置
+   * @returns {Promise<Object>} 默认配置
    */
-  resetConfig() {
+  async resetConfig() {
     const defaultConfig = this.getDefaultConfig();
-    this.saveConfig(defaultConfig);
+    await this.saveConfig(defaultConfig);
     return defaultConfig;
   }
 
   /**
    * 清除配置
-   * @returns {boolean} 是否成功
+   * @returns {Promise<boolean>} 是否成功
    */
-  clearConfig() {
-    return this.storage.clearConfig();
+  async clearConfig() {
+    return await this.storage.clearConfig();
   }
 
   /**
@@ -216,6 +220,22 @@ class ConfigManager {
       if (prize.winCount >= prize.maxWins) return false;
       return true;
     });
+  }
+
+  /**
+   * 获取存储类型
+   * @returns {string} 存储类型（'local' 或 'server'）
+   */
+  getStorageType() {
+    return this.storage.getStorageType();
+  }
+
+  /**
+   * 是否为服务端存储
+   * @returns {boolean} 是否为服务端存储
+   */
+  isServerStorage() {
+    return this.storage.isServerStorage();
   }
 }
 

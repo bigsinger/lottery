@@ -1,20 +1,28 @@
 /**
  * 存储管理模块
- * 使用 localStorage 实现永久存储
+ * 使用 localStorage 实现纯前端存储（跨平台兼容）
  */
 
+/**
+ * 本地存储管理器
+ * 使用 localStorage 实现存储
+ */
 class StorageManager {
   /**
    * 构造函数
+   * @param {string} user 用户标识（保留参数，兼容旧代码）
    * @param {string} mode 模式名称
    */
-  constructor(mode) {
+  constructor(user, mode) {
+    this.user = user || '';
     this.mode = mode || 'default';
     this.configKey = `lottery_config_${this.mode}`;
     this.historyKey = `lottery_history_${this.mode}`;
     
     // 检查 localStorage 是否可用
     this.isAvailable = this.checkAvailability();
+    
+    console.log(`使用本地存储，模式: ${this.mode}`);
   }
 
   /**
@@ -34,11 +42,27 @@ class StorageManager {
   }
 
   /**
+   * 获取存储类型
+   * @returns {string} 存储类型（'local'）
+   */
+  getStorageType() {
+    return 'local';
+  }
+
+  /**
+   * 是否为服务端存储
+   * @returns {boolean} 始终返回 false
+   */
+  isServerStorage() {
+    return false;
+  }
+
+  /**
    * 保存配置
    * @param {Object} config 配置对象
-   * @returns {boolean} 是否成功
+   * @returns {Promise<boolean>} 是否成功
    */
-  saveConfig(config) {
+  async saveConfig(config) {
     if (!this.isAvailable) {
       console.warn('存储不可用，配置无法保存');
       return false;
@@ -57,9 +81,9 @@ class StorageManager {
 
   /**
    * 加载配置
-   * @returns {Object|null} 配置对象
+   * @returns {Promise<Object|null>} 配置对象
    */
-  loadConfig() {
+  async loadConfig() {
     if (!this.isAvailable) {
       return null;
     }
@@ -78,9 +102,9 @@ class StorageManager {
 
   /**
    * 清除配置
-   * @returns {boolean} 是否成功
+   * @returns {Promise<boolean>} 是否成功
    */
-  clearConfig() {
+  async clearConfig() {
     if (!this.isAvailable) {
       return false;
     }
@@ -97,15 +121,15 @@ class StorageManager {
   /**
    * 保存抽奖历史
    * @param {Object} result 抽奖结果
-   * @returns {boolean} 是否成功
+   * @returns {Promise<boolean>} 是否成功
    */
-  saveHistory(result) {
+  async saveHistory(result) {
     if (!this.isAvailable) {
       return false;
     }
 
     try {
-      const history = this.loadHistory();
+      const history = await this.loadHistory();
       history.push({
         ...result,
         timestamp: new Date().toISOString()
@@ -124,9 +148,9 @@ class StorageManager {
 
   /**
    * 加载抽奖历史
-   * @returns {Array} 历史记录数组
+   * @returns {Promise<Array>} 历史记录数组
    */
-  loadHistory() {
+  async loadHistory() {
     if (!this.isAvailable) {
       return [];
     }
@@ -145,9 +169,9 @@ class StorageManager {
 
   /**
    * 清除历史
-   * @returns {boolean} 是否成功
+   * @returns {Promise<boolean>} 是否成功
    */
-  clearHistory() {
+  async clearHistory() {
     if (!this.isAvailable) {
       return false;
     }
@@ -163,16 +187,16 @@ class StorageManager {
 
   /**
    * 清除所有数据（配置 + 历史）
-   * @returns {boolean} 是否成功
+   * @returns {Promise<boolean>} 是否成功
    */
-  clearAll() {
-    return this.clearConfig() && this.clearHistory();
+  async clearAll() {
+    return await this.clearConfig() && await this.clearHistory();
   }
 }
 
 // 导出
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = StorageManager;
+  module.exports = { StorageManager };
 } else {
   window.StorageManager = StorageManager;
 }

@@ -6,10 +6,10 @@
 
 - 🎨 **可视化转盘** - Canvas 绘制，流畅旋转动画
 - ⚙️ **高度可配置** - 自定义选项、权重、颜色、图标
-- 💾 **本地存储** - 配置永久保存在浏览器
+- 💾 **多设备同步** - 支持 localStorage 和服务端存储，多设备配置一致
 - 🔄 **多模式** - URL 参数切换不同抽奖场景
 - 📱 **响应式** - 支持桌面端和移动端（已优化手机端渲染）
-- 🚀 **零依赖** - 纯静态文件，无需后端
+- 🚀 **零依赖** - 纯静态文件，可选服务端 API
 - 🎯 **双场景支持** - 抽奖品、抽人两种应用场景
 
 ## 🎯 应用场景
@@ -152,6 +152,75 @@ https://your-domain.com/lottery/index.html?mode=company
 
 每个模式拥有独立的配置存储。
 
+---
+
+### 多设备配置同步 🌐
+
+**痛点**：传统本地存储（localStorage）只能单设备使用，手机配置后电脑无法同步。
+
+**解决方案**：通过 `user` 参数实现多设备配置同步。
+
+#### 使用方式
+
+在 URL 中添加 `user` 参数：
+
+```
+https://your-domain.com/lottery/index.html?user=myname&mode=team1
+```
+
+- **user 参数**：用户标识（只允许字母、数字、下划线、中划线）
+- **mode 参数**：模式名称（可选）
+
+#### 存储方式对比
+
+| 方式 | URL 参数 | 存储位置 | 多设备同步 | 适用场景 |
+|------|----------|----------|------------|----------|
+| 本地存储 | 无 user | localStorage | ❌ | 单设备使用 |
+| 服务端存储 | 有 user | 服务端 JSON 文件 | ✅ | 多设备使用 |
+
+#### 配置文件结构
+
+服务端存储的配置文件位于 `src/user/` 目录：
+
+```
+src/user/
+├── myname.json        # 用户 myname 的所有配置
+├── team1.json         # 用户 team1 的所有配置
+└── ...
+```
+
+每个用户的配置文件支持多个模式：
+
+```json
+{
+  "configs": {
+    "default": { /* 默认模式配置 */ },
+    "team1": { /* team1 模式配置 */ },
+    "class1": { /* class1 模式配置 */ }
+  },
+  "histories": {
+    "default": [ /* 默认模式历史 */ ],
+    "team1": [ /* team1 模式历史 */ ]
+  },
+  "createdAt": "2026-04-09T00:00:00.000Z",
+  "updatedAt": "2026-04-09T01:00:00.000Z"
+}
+```
+
+#### API 部署要求
+
+多设备同步需要部署 API：
+
+**Node.js 环境**（Vercel/Netlify）：
+- 将 `src/api/api.js` 作为 Serverless Function
+- 确保 `src/user/` 目录存在且可写
+
+#### 使用建议
+
+1. **保存专属链接**：将带有 `user` 和 `mode` 参数的 URL 保存到书签或笔记
+2. **分享给团队**：团队成员使用相同 `user` 参数，共享同一配置
+3. **隐私保护**：`user` 参数建议使用不易猜测的标识（如随机字符串）
+
 ## 🎮 功能说明
 
 ### 基本操作
@@ -214,13 +283,17 @@ lottery/
 │   └── 使用说明.md
 ├── src/                    # 源码目录（部署此目录）
 │   ├── index.html          # 主页面
+│   ├── api/                # API 目录（多设备同步）
+│   │   └── api.js          # Node.js API
+│   ├── user/               # 用户配置目录（多设备同步）
+│   │   └── {user}.json     # 用户配置文件
 │   ├── css/
 │   │   ├── style.css       # 主样式
 │   │   ├── turntable.css   # 转盘样式
 │   │   └── modal.css       # 弹窗样式
 │   └── js/
 │       ├── utils.js        # 工具函数
-│       ├── storage.js      # 存储管理
+│       ├── storage.js      # 存储管理（本地存储）
 │       ├── config.js       # 配置管理
 │       ├── turntable.js    # 转盘引擎
 │       └── app.js          # 主程序
@@ -231,8 +304,9 @@ lottery/
 
 - **HTML5** - Canvas 绘制转盘
 - **CSS3** - 动画和响应式布局
-- **JavaScript** - 原生 ES6+
-- **localStorage** - 永久本地存储
+- **JavaScript** - 原生 ES6+（异步支持）
+- **localStorage** - 本地存储（单设备）
+- **服务端 API** - Node.js（多设备同步）
 
 ## 🌐 兼容性
 
@@ -244,7 +318,7 @@ lottery/
 
 ## 📝 数据结构
 
-### 配置数据
+### 配置数据（本地存储）
 
 ```json
 {
@@ -265,10 +339,47 @@ lottery/
 }
 ```
 
+### 用户配置文件（服务端存储）
+
+```json
+{
+  "configs": {
+    "default": {
+      "user": "myname",
+      "mode": "default",
+      "title": "幸运抽奖",
+      "prizes": [ /* 奖品列表 */ ],
+      "updatedAt": "2026-04-09T00:00:00.000Z"
+    },
+    "team1": {
+      "user": "myname",
+      "mode": "team1",
+      "title": "团队抽奖",
+      "prizes": [ /* 奖品列表 */ ],
+      "updatedAt": "2026-04-09T01:00:00.000Z"
+    }
+  },
+  "histories": {
+    "default": [
+      { "prize": "一等奖", "icon": "🏆", "timestamp": "2026-04-09T02:00:00.000Z" }
+    ],
+    "team1": [
+      { "prize": "张三", "icon": "👤", "timestamp": "2026-04-09T03:00:00.000Z" }
+    ]
+  },
+  "createdAt": "2026-04-09T00:00:00.000Z",
+  "updatedAt": "2026-04-09T03:00:00.000Z"
+}
+```
+
 ### 本地存储 Key
 
-- `lottery_config_{mode}` - 配置数据
-- `lottery_history_{mode}` - 抽奖历史
+- `lottery_config_{mode}` - 配置数据（单设备）
+- `lottery_history_{mode}` - 抽奖历史（单设备）
+
+### 服务端存储路径
+
+- `src/user/{user}.json` - 用户配置文件（多设备）
 
 ## 📖 参考资料
 
