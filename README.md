@@ -48,10 +48,96 @@
 2. 双击打开 `index.html`
 3. 即可开始使用
 
-### 郯署到虚拟主机
+## 🚀 部署指南
 
-1. 将 `src` 目录下所有文件上传到服务器
-2. 访问对应 URL 即可使用
+### 方式一：GitHub Pages（推荐，免费）
+
+**步骤**：
+
+1. Fork 本仓库到你的 GitHub 账号
+2. 进入仓库设置：`Settings` → `Pages`
+3. Source 选择 `Deploy from a branch`
+4. Branch 选择 `main`，目录选择 `/src`
+5. 点击 `Save`
+6. 等待部署完成，访问 `https://你的用户名.github.io/lottery/`
+
+**优点**：免费、自动 HTTPS、无需服务器
+
+### 方式二：Vercel（推荐，免费）
+
+**步骤**：
+
+1. 访问 [Vercel](https://vercel.com/) 并登录
+2. 点击 `New Project`
+3. 导入你的 GitHub 仓库
+4. Framework Preset 选择 `Other`
+5. Root Directory 设置为 `src`
+6. 点击 `Deploy`
+7. 等待部署完成，获得访问链接
+
+**优点**：免费、自动 HTTPS、全球 CDN、自定义域名
+
+### 方式三：Netlify（免费）
+
+**步骤**：
+
+1. 访问 [Netlify](https://www.netlify.com/) 并登录
+2. 点击 `Add new site` → `Deploy manually`
+3. 将 `src` 目录拖拽上传
+4. 等待部署完成，获得访问链接
+
+**或者连接 GitHub**：
+
+1. 点击 `Add new site` → `Import an existing project`
+2. 选择你的 GitHub 仓库
+3. Publish directory 设置为 `src`
+4. 点击 `Deploy site`
+
+**优点**：免费、自动 HTTPS、持续部署
+
+### 方式四：传统虚拟主机
+
+**步骤**：
+
+1. 购买虚拟主机或使用已有主机
+2. 通过 FTP 或主机控制面板上传文件
+3. 将 `src` 目录下所有文件上传到网站根目录或子目录
+4. 访问你的域名即可使用
+
+**优点**：完全控制、可绑定自有域名
+
+### 方式五：本地服务器
+
+**Python 方式**：
+
+```bash
+cd src
+python -m http.server 8080
+# 访问 http://localhost:8080
+```
+
+**Node.js 方式**：
+
+```bash
+npx serve src
+# 访问 http://localhost:3000
+```
+
+**优点**：本地测试、无需联网
+
+---
+
+### 部署对比
+
+| 方式 | 费用 | HTTPS | 自定义域名 | 技术难度 |
+|------|------|-------|------------|----------|
+| GitHub Pages | 免费 | ✅ | ✅ | ⭐ |
+| Vercel | 免费 | ✅ | ✅ | ⭐ |
+| Netlify | 免费 | ✅ | ✅ | ⭐ |
+| 虚拟主机 | 付费 | ⚠️ | ✅ | ⭐⭐ |
+| 本地服务器 | 免费 | ❌ | ❌ | ⭐ |
+
+---
 
 ### 多模式使用
 
