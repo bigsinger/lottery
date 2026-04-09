@@ -146,6 +146,29 @@
   text-overflow: ellipsis;
 }
 
+/* 奖品图标 */
+.prize-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+/* 中奖徽章 */
+.win-badge {
+  background: #27ae60;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-left: 8px;
+}
+
 .prize-weight {
   font-size: 12px;
   color: #999;
@@ -154,6 +177,38 @@
 .prize-actions {
   display: flex;
   gap: 5px;
+}
+
+/* 编辑按钮 */
+.edit-btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  background: #667eea;
+  color: white;
+  transition: all 0.3s ease;
+}
+
+.edit-btn:hover {
+  opacity: 0.8;
+}
+
+/* 删除按钮 */
+.delete-btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  background: #f5576c;
+  color: white;
+  transition: all 0.3s ease;
+}
+
+.delete-btn:hover {
+  opacity: 0.8;
 }
 
 .prize-btn {

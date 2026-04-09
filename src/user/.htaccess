@@ -1,0 +1,11 @@
+# 禁止直接访问用户配置文件
+<FilesMatch "\.json$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+# 允许 PHP 脚本访问
+<FilesMatch "\.php$">
+    Order Allow,Deny
+    Allow from all
+</FilesMatch>

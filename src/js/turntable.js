@@ -111,7 +111,7 @@ class Turntable {
       const startAngle = i * anglePerPrize - Math.PI / 2;
       const endAngle = startAngle + anglePerPrize;
       
-      // 绘制扇形
+      // 绘制扇形（顺时针方向，arc默认是顺时针）
       ctx.beginPath();
       ctx.moveTo(centerX, centerY);
       ctx.arc(centerX, centerY, radius, startAngle, endAngle);
@@ -180,49 +180,64 @@ class Turntable {
   /**
    * 开始旋转
    * @param {number} targetIndex 目标奖品索引
-   * @param {Function} callback 完成回调
+   * @returns {Promise} 完成后返回中奖奖品
    */
-  spin(targetIndex, callback) {
-    if (this.isSpinning) {
-      console.warn('转盘正在旋转中');
-      return;
-    }
-    
-    this.isSpinning = true;
-    
-    const num = this.prizes.length;
-    const anglePerPrize = 360 / num;
-    
-    // 计算目标角度
-    // 从顶部（指针位置）开始，奖品索引对应的角度
-    const targetAngle = targetIndex * anglePerPrize + anglePerPrize / 2;
-    
-    // 计算总旋转角度：多转几圈 + 精确停在目标位置
-    const extraRotations = 5; // 多转5圈
-    const totalRotation = 360 * extraRotations + (360 - targetAngle);
-    
-    // 累加当前角度（确保每次都从当前位置开始）
-    this.currentRotation += totalRotation;
-    
-    // 应用 CSS Transform 动画
-    this.canvas.style.transition = 'transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99)';
-    this.canvas.style.transform = `rotate(${this.currentRotation}deg)`;
-    
-    // 监听动画结束
-    const onEnd = () => {
-      this.isSpinning = false;
-      this.canvas.removeEventListener('transitionend', onEnd);
-      
-      // 重置 transition，保持当前角度
-      this.canvas.style.transition = 'none';
-      
-      // 调用回调
-      if (callback) {
-        callback(this.prizes[targetIndex]);
+  spin(targetIndex) {
+    return new Promise((resolve, reject) => {
+      if (this.isSpinning) {
+        console.warn('转盘正在旋转中');
+        reject(new Error('转盘正在旋转中'));
+        return;
       }
-    };
-    
-    this.canvas.addEventListener('transitionend', onEnd);
+      
+      if (!this.prizes || this.prizes.length === 0) {
+        reject(new Error('奖品列表为空'));
+        return;
+      }
+      
+      if (targetIndex < 0 || targetIndex >= this.prizes.length) {
+        reject(new Error('无效的奖品索引'));
+        return;
+      }
+      
+      this.isSpinning = true;
+      
+      const num = this.prizes.length;
+      const anglePerPrize = 360 / num;
+      
+      // 计算目标角度
+      // 从顶部（指针位置）开始，奖品索引对应的角度
+      const targetAngle = targetIndex * anglePerPrize + anglePerPrize / 2;
+      
+      // 计算总旋转角度：多转几圈 + 精确停在目标位置
+      const extraRotations = 5; // 多转5圈
+      const totalRotation = 360 * extraRotations + (360 - targetAngle);
+      
+      // 累加当前角度（确保每次都从当前位置开始）
+      this.currentRotation += totalRotation;
+      
+      console.log(`开始旋转: 目标索引=${targetIndex}, 目标角度=${targetAngle}°, 总旋转=${this.currentRotation}°`);
+      
+      // 应用 CSS Transform 动画
+      this.canvas.style.transition = 'transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99)';
+      this.canvas.style.transform = `rotate(${this.currentRotation}deg)`;
+      
+      // 监听动画结束
+      const onEnd = () => {
+        this.isSpinning = false;
+        this.canvas.removeEventListener('transitionend', onEnd);
+        
+        // 重置 transition，保持当前角度
+        this.canvas.style.transition = 'none';
+        
+        console.log(`旋转完成: 中奖=${this.prizes[targetIndex].text}`);
+        
+        // 返回中奖奖品
+        resolve(this.prizes[targetIndex]);
+      };
+      
+      this.canvas.addEventListener('transitionend', onEnd);
+    });
   }
 
   /**

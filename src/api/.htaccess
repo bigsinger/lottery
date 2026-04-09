@@ -1,0 +1,12 @@
+# 允许跨域访问
+<IfModule mod_headers.c>
+    Header set Access-Control-Allow-Origin "*"
+    Header set Access-Control-Allow-Methods "GET, POST, OPTIONS"
+    Header set Access-Control-Allow-Headers "Content-Type"
+</IfModule>
+
+# 只允许 POST 和 GET 请求
+<LimitExcept GET POST OPTIONS>
+    Order Allow,Deny
+    Deny from all
+</LimitExcept>

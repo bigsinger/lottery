@@ -184,20 +184,47 @@ class LotteryApp {
     // 奖品编辑器事件
     this.bindPrizeEditorEvents();
     
-    // 保存配置
+    // 保存配置（不关闭对话框）
     document.getElementById('saveConfigBtn').addEventListener('click', async () => {
-      await this.saveConfig();
-      this.closeModal(this.elements.settingModal);
-    });
-    
-    // 重置配置
-    document.getElementById('resetConfigBtn').addEventListener('click', async () => {
-      if (confirm('确定要重置配置吗？将恢复默认设置。')) {
-        this.config = await this.configManager.resetConfig();
-        this.updateUI();
+      // 如果有正在编辑的奖品，先保存编辑区域的修改
+      if (this.editingPrizeId) {
+        const name = document.getElementById('prizeName').value.trim();
+        const weight = parseInt(document.getElementById('prizeWeight').value) || 10;
+        const maxWins = parseInt(document.getElementById('prizeMaxWins').value) || 1;
+        
+        if (!name) {
+          alert('请输入抽奖名称');
+          return;
+        }
+        
+        this.config = this.configManager.updatePrize(this.config, this.editingPrizeId, {
+          text: name,
+          icon: this.selectedIcon || '🎁',
+          color: this.selectedColor || '#e74c3c',
+          weight: weight,
+          maxWins: maxWins
+        });
+        this.updatePrizeList();
         this.turntable.updatePrizes(this.config.prizes);
         this.turntable.draw();
-        this.closeModal(this.elements.settingModal);
+        this.hidePrizeEditor();
+      }
+      
+      // 保存标题
+      this.config.title = document.getElementById('configTitle').value.trim() || '幸运抽奖';
+      this.elements.title.textContent = this.config.title;
+      
+      await this.saveConfig();
+      alert('配置已保存！');
+    });
+    
+    // 重置中奖次数（不重置配置列表）
+    document.getElementById('resetConfigBtn').addEventListener('click', async () => {
+      if (confirm('确定要重置所有中奖次数吗？\n\n这将把所有奖品的中奖次数清零，但不会改变奖品配置。')) {
+        this.config = this.configManager.resetWinCounts(this.config);
+        await this.saveConfig();
+        this.updatePrizeList();
+        alert('中奖次数已重置！');
       }
     });
   }
@@ -224,50 +251,8 @@ class LotteryApp {
       });
     });
     
-    // 保存奖品
-    document.getElementById('prizeSaveBtn').addEventListener('click', async () => {
-      const name = document.getElementById('prizeName').value.trim();
-      const weight = parseInt(document.getElementById('prizeWeight').value) || 10;
-      const maxWins = parseInt(document.getElementById('prizeMaxWins').value) || 1;
-      
-      if (!name) {
-        alert('请输入抽奖名称');
-        return;
-      }
-      
-      if (this.editingPrizeId) {
-        // 编辑现有奖品
-        this.config = this.configManager.updatePrize(this.config, this.editingPrizeId, {
-          text: name,
-          icon: this.selectedIcon || '🎁',
-          color: this.selectedColor || '#e74c3c',
-          weight: weight,
-          maxWins: maxWins
-        });
-      } else {
-        // 添加新奖品
-        this.config = this.configManager.addPrize(this.config, {
-          text: name,
-          icon: this.selectedIcon || '🎁',
-          color: this.selectedColor || '#e74c3c',
-          weight: weight,
-          maxWins: maxWins
-        });
-      }
-      
-      this.updatePrizeList();
-      this.turntable.updatePrizes(this.config.prizes);
-      this.turntable.draw();
-      this.hidePrizeEditor();
-      
-      // 保存配置
-      await this.saveConfig();
-    });
-    
-    // 取消编辑
-    document.getElementById('prizeCancelBtn').addEventListener('click', () => {
-      this.hidePrizeEditor();
-    });
+    // 注意：编辑区域的保存和取消按钮已移除
+    // 用户编辑后需点击设置对话框底部的"保存"按钮来保存
   }
 
   /**
@@ -284,7 +269,7 @@ class LotteryApp {
     if (this.elements.userIndicator) {
       if (this.user) {
         this.elements.userIndicator.textContent = `用户: ${this.user}`;
-        this.elements.userIndicator.style.display = 'block';
+        this.elements.userIndicator.style.display = 'inline';
       } else {
         this.elements.userIndicator.style.display = 'none';
       }
@@ -366,7 +351,12 @@ class LotteryApp {
    * 显示奖品编辑器
    */
   showPrizeEditor() {
-    document.getElementById('prizeEditor').style.display = 'block';
+    const editor = document.getElementById('prizeEditor');
+    editor.style.display = 'block';
+    // 自动滚动到编辑区域
+    setTimeout(() => {
+      editor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
   }
 
   /**
@@ -386,7 +376,7 @@ class LotteryApp {
     // 检查是否有可抽奖的奖品
     const availablePrizes = this.configManager.getAvailablePrizes(this.config);
     if (availablePrizes.length === 0) {
-      alert('没有可抽奖的选项！请检查权重设置或重置中奖次数。');
+      alert('全部抽完，请重置抽奖结果重新开始。');
       return;
     }
     
@@ -397,8 +387,11 @@ class LotteryApp {
     // 根据权重计算中奖结果
     const result = this.calculateResult(availablePrizes);
     
-    // 旋转转盘
-    await this.turntable.spin(result);
+    // 找到中奖奖品在配置列表中的索引（用于转盘旋转定位）
+    const targetIndex = this.config.prizes.findIndex(p => p.id === result.id);
+    
+    // 旋转转盘（传入索引）
+    await this.turntable.spin(targetIndex);
     
     // 更新中奖次数
     const prizeIndex = this.config.prizes.findIndex(p => p.id === result.id);

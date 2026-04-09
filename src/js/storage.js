@@ -1,20 +1,20 @@
 /**
  * 存储管理模块
- * 使用 localStorage 实现纯前端存储（跨平台兼容）
+ * 支持本地存储和服务端存储
+ * - 无 user 参数：使用 localStorage（本地存储）
+ * - 有 user 参数：使用服务端 API（多设备同步）
  */
 
 /**
  * 本地存储管理器
  * 使用 localStorage 实现存储
  */
-class StorageManager {
+class LocalStorageManager {
   /**
    * 构造函数
-   * @param {string} user 用户标识（保留参数，兼容旧代码）
    * @param {string} mode 模式名称
    */
-  constructor(user, mode) {
-    this.user = user || '';
+  constructor(mode) {
     this.mode = mode || 'default';
     this.configKey = `lottery_config_${this.mode}`;
     this.historyKey = `lottery_history_${this.mode}`;
@@ -43,7 +43,7 @@ class StorageManager {
 
   /**
    * 获取存储类型
-   * @returns {string} 存储类型（'local'）
+   * @returns {string} 存储类型
    */
   getStorageType() {
     return 'local';
@@ -194,9 +194,277 @@ class StorageManager {
   }
 }
 
+/**
+ * 服务端存储管理器
+ * 使用 PHP API 实现多设备同步
+ */
+class ServerStorageManager {
+  /**
+   * 构造函数
+   * @param {string} user 用户标识
+   * @param {string} mode 模式名称
+   */
+  constructor(user, mode) {
+    this.user = user;
+    this.mode = mode || 'default';
+    
+    // API 路径（相对于 index.html）
+    this.apiBase = 'api';
+    
+    console.log(`使用服务端存储，用户: ${this.user}, 模式: ${this.mode}`);
+  }
+
+  /**
+   * 获取存储类型
+   * @returns {string} 存储类型
+   */
+  getStorageType() {
+    return 'server';
+  }
+
+  /**
+   * 是否为服务端存储
+   * @returns {boolean} 始终返回 true
+   */
+  isServerStorage() {
+    return true;
+  }
+
+  /**
+   * 保存配置到服务器
+   * @param {Object} config 配置对象
+   * @returns {Promise<boolean>} 是否成功
+   */
+  async saveConfig(config) {
+    try {
+      const response = await fetch(`${this.apiBase}/save.php`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          user: this.user,
+          mode: this.mode,
+          title: config.title,
+          prizes: config.prizes
+        })
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok || !result.success) {
+        console.error('保存配置失败:', result.error || '未知错误');
+        return false;
+      }
+
+      console.log('配置已保存到服务器:', result.message);
+      return true;
+    } catch (e) {
+      console.error('保存配置失败:', e);
+      return false;
+    }
+  }
+
+  /**
+   * 从服务器加载配置
+   * @returns {Promise<Object|null>} 配置对象
+   */
+  async loadConfig() {
+    try {
+      const response = await fetch(`${this.apiBase}/load.php?user=${encodeURIComponent(this.user)}`);
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        console.error('加载配置失败:', result.error || '未知错误');
+        return null;
+      }
+
+      if (!result.exists) {
+        console.log('用户配置不存在，将使用默认配置');
+        return null;
+      }
+
+      console.log('配置已从服务器加载');
+      return result.config;
+    } catch (e) {
+      console.error('加载配置失败:', e);
+      return null;
+    }
+  }
+
+  /**
+   * 清除配置（暂不支持，保留接口）
+   * @returns {Promise<boolean>} 是否成功
+   */
+  async clearConfig() {
+    console.warn('服务端存储暂不支持清除配置');
+    return false;
+  }
+
+  /**
+   * 保存抽奖历史（使用本地存储）
+   * @param {Object} result 抽奖结果
+   * @returns {Promise<boolean>} 是否成功
+   */
+  async saveHistory(result) {
+    // 历史记录保存在本地，不同步到服务器
+    const historyKey = `lottery_history_${this.user}_${this.mode}`;
+    try {
+      const historyStr = localStorage.getItem(historyKey);
+      const history = historyStr ? JSON.parse(historyStr) : [];
+      history.push({
+        ...result,
+        timestamp: new Date().toISOString()
+      });
+      if (history.length > 100) {
+        history.shift();
+      }
+      localStorage.setItem(historyKey, JSON.stringify(history));
+      return true;
+    } catch (e) {
+      console.error('保存历史失败:', e);
+      return false;
+    }
+  }
+
+  /**
+   * 加载抽奖历史（使用本地存储）
+   * @returns {Promise<Array>} 历史记录数组
+   */
+  async loadHistory() {
+    const historyKey = `lottery_history_${this.user}_${this.mode}`;
+    try {
+      const historyStr = localStorage.getItem(historyKey);
+      return historyStr ? JSON.parse(historyStr) : [];
+    } catch (e) {
+      console.error('加载历史失败:', e);
+      return [];
+    }
+  }
+
+  /**
+   * 清除历史（使用本地存储）
+   * @returns {Promise<boolean>} 是否成功
+   */
+  async clearHistory() {
+    const historyKey = `lottery_history_${this.user}_${this.mode}`;
+    try {
+      localStorage.removeItem(historyKey);
+      return true;
+    } catch (e) {
+      console.error('清除历史失败:', e);
+      return false;
+    }
+  }
+
+  /**
+   * 清除所有数据
+   * @returns {Promise<boolean>} 是否成功
+   */
+  async clearAll() {
+    return await this.clearConfig() && await this.clearHistory();
+  }
+}
+
+/**
+ * 统一存储管理器
+ * 根据 user 参数自动选择存储方式
+ */
+class StorageManager {
+  /**
+   * 构造函数
+   * @param {string} user 用户标识（可选）
+   * @param {string} mode 模式名称
+   */
+  constructor(user, mode) {
+    // 根据是否有 user 参数选择存储方式
+    if (user && user.trim()) {
+      this.storage = new ServerStorageManager(user.trim(), mode);
+    } else {
+      this.storage = new LocalStorageManager(mode);
+    }
+  }
+
+  /**
+   * 获取存储类型
+   * @returns {string} 存储类型（'local' 或 'server'）
+   */
+  getStorageType() {
+    return this.storage.getStorageType();
+  }
+
+  /**
+   * 是否为服务端存储
+   * @returns {boolean}
+   */
+  isServerStorage() {
+    return this.storage.isServerStorage();
+  }
+
+  /**
+   * 保存配置
+   * @param {Object} config 配置对象
+   * @returns {Promise<boolean>} 是否成功
+   */
+  async saveConfig(config) {
+    return await this.storage.saveConfig(config);
+  }
+
+  /**
+   * 加载配置
+   * @returns {Promise<Object|null>} 配置对象
+   */
+  async loadConfig() {
+    return await this.storage.loadConfig();
+  }
+
+  /**
+   * 清除配置
+   * @returns {Promise<boolean>} 是否成功
+   */
+  async clearConfig() {
+    return await this.storage.clearConfig();
+  }
+
+  /**
+   * 保存抽奖历史
+   * @param {Object} result 抽奖结果
+   * @returns {Promise<boolean>} 是否成功
+   */
+  async saveHistory(result) {
+    return await this.storage.saveHistory(result);
+  }
+
+  /**
+   * 加载抽奖历史
+   * @returns {Promise<Array>} 历史记录数组
+   */
+  async loadHistory() {
+    return await this.storage.loadHistory();
+  }
+
+  /**
+   * 清除历史
+   * @returns {Promise<boolean>} 是否成功
+   */
+  async clearHistory() {
+    return await this.storage.clearHistory();
+  }
+
+  /**
+   * 清除所有数据
+   * @returns {Promise<boolean>} 是否成功
+   */
+  async clearAll() {
+    return await this.storage.clearAll();
+  }
+}
+
 // 导出
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { StorageManager };
+  module.exports = { StorageManager, LocalStorageManager, ServerStorageManager };
 } else {
   window.StorageManager = StorageManager;
+  window.LocalStorageManager = LocalStorageManager;
+  window.ServerStorageManager = ServerStorageManager;
 }

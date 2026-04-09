@@ -111,12 +111,26 @@ body {
 
 /* 模式指示器 */
 .mode-indicator {
-  margin-top: 15px;
   padding: 8px 16px;
   background: rgba(255, 255, 255, 0.2);
   border-radius: 20px;
   color: white;
   font-size: 14px;
+}
+
+/* 用户指示器（与模式指示器风格一致） */
+.user-indicator {
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  color: white;
+  font-size: 14px;
+}
+
+.header-right {
+  display: flex;
+  gap: 10px;
+  align-items: center;
 }
 
 /* 响应式设计 */
@@ -152,6 +166,15 @@ body {
   .mode-indicator {
     font-size: 12px;
     padding: 6px 12px;
+  }
+  
+  .user-indicator {
+    font-size: 12px;
+    padding: 6px 12px;
+  }
+  
+  .header-right {
+    gap: 6px;
   }
 }
 
