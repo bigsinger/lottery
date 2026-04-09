@@ -12,3 +12,10 @@ Thumbs.db
 
 # 日志
 *.log
+
+# nanobot 工作文件
+SOUL.md
+USER.md
+memory/
+.cursor
+.dream_cursor
