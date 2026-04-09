@@ -117,8 +117,8 @@ class LotteryApp {
     window.addEventListener('resize', () => {
       clearTimeout(this.resizeTimeout);
       this.resizeTimeout = setTimeout(() => {
-        this.turntable.resize();
-        this.turntable.draw();
+        this.turntable.resizeCanvas();
+        this.turntable.draw(this.config.prizes);
       }, 100);
     });
     

@@ -1,8 +1,0 @@
-# Ignore user configuration files (they are created dynamically)
-*.json
-
-# But keep the example file and documentation
-!example.json.example
-!README.md
-!.gitkeep
-!.htaccess

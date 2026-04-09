@@ -76,6 +76,10 @@ class Turntable {
    * @param {Array} prizes 奖品列表
    */
   draw(prizes) {
+    // 参数检查
+    if (!prizes || !Array.isArray(prizes)) {
+      prizes = this.prizes || [];
+    }
     this.prizes = prizes;
     const num = prizes.length;
     
