@@ -140,24 +140,25 @@ class Turntable {
       ctx.translate(textX, textY);
       ctx.rotate(textAngle + Math.PI / 2);
       
-      // 绘制图标（如果有）
+      // 绘制文字（文字过长时截断）- 文字在上
+      ctx.fillStyle = '#fff';
+      ctx.font = `bold ${baseFontSize}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      // 增大文字可显示区域
+      const maxLen = actualSize < 250 ? 4 : (actualSize < 300 ? 5 : (actualSize < 400 ? 7 : 10));
+      const text = prize.text.length > maxLen ? prize.text.substring(0, maxLen) + '..' : prize.text;
+      const textOffset = prize.icon ? -iconSize / 2 - 2 : 0;
+      ctx.fillText(text, 0, textOffset);
+      
+      // 绘制图标（如果有）- 图标在下
       if (prize.icon) {
         ctx.fillStyle = '#fff';
         ctx.font = `${iconSize}px Arial`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(prize.icon, 0, -baseFontSize);
+        ctx.fillText(prize.icon, 0, baseFontSize / 2 + 4);
       }
-      
-      // 绘制文字（文字过长时截断）
-      ctx.fillStyle = '#fff';
-      ctx.font = `bold ${baseFontSize}px Arial`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      const maxLen = actualSize < 250 ? 3 : (actualSize < 300 ? 4 : (actualSize < 400 ? 5 : 6));
-      const text = prize.text.length > maxLen ? prize.text.substring(0, maxLen) + '..' : prize.text;
-      const textOffset = prize.icon ? baseFontSize + 2 : 0;
-      ctx.fillText(text, 0, textOffset);
       
       ctx.restore();
     }
