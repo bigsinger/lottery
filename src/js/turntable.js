@@ -38,9 +38,16 @@ class Turntable {
     let size = Math.min(container.offsetWidth, container.offsetHeight);
     
     // 如果容器尺寸为0（可能是隐藏状态），使用备用尺寸
-    if (size === 0) {
+    if (size === 0 || size < 50) {
       size = Math.min(window.innerWidth - 40, 320);
+      // 手机端使用更保守的尺寸
+      if (window.innerWidth < 500) {
+        size = Math.min(window.innerWidth - 60, 280);
+      }
     }
+    
+    // 确保 size 为正数
+    size = Math.max(size, 150);
     
     // 设置实际绘制尺寸（高分辨率）
     const dpr = window.devicePixelRatio || 1;
@@ -52,14 +59,16 @@ class Turntable {
     // 重置缩放（避免重复缩放）
     this.ctx.setTransform(1, 0, 0, 1, 0, 0);
     
-    // 更新中心和半径
-    this.options.centerX = (size * dpr) / 2;
-    this.options.centerY = (size * dpr) / 2;
-    this.options.radius = (size * dpr) / 2 - 10;
+    // 更新中心和半径（使用 CSS 像素尺寸）
+    this.options.centerX = size / 2;
+    this.options.centerY = size / 2;
+    this.options.radius = size / 2 - 10;
     this.options.textRadius = this.options.radius * 0.65;
     
-    // 缩放上下文
+    // 缩放上下文以支持高分辨率
     this.ctx.scale(dpr, dpr);
+    
+    console.log(`Canvas 尺寸: ${size}px, DPR: ${dpr}, 实际: ${size * dpr}px`);
   }
 
   /**
@@ -78,16 +87,16 @@ class Turntable {
     const ctx = this.ctx;
     const { centerX, centerY, radius } = this.options;
     
-    // 获取实际绘制尺寸（考虑 DPR）
+    // 使用 CSS 像素尺寸计算（因为已经 scale 过了）
     const dpr = window.devicePixelRatio || 1;
     const actualSize = this.canvas.width / dpr;
     
     // 根据奖品数量和屏幕尺寸动态计算字体大小
-    const baseFontSize = actualSize < 300 ? 10 : (actualSize < 400 ? 12 : 14);
-    const iconSize = baseFontSize + 8;
+    const baseFontSize = actualSize < 250 ? 9 : (actualSize < 300 ? 10 : (actualSize < 400 ? 12 : 14));
+    const iconSize = baseFontSize + 6;
     
-    // 清除画布
-    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    // 清除画布（使用实际像素尺寸）
+    ctx.clearRect(0, 0, actualSize, actualSize);
     
     // 计算每个扇形的角度
     const anglePerPrize = (2 * Math.PI) / num;
@@ -141,8 +150,8 @@ class Turntable {
       ctx.font = `bold ${baseFontSize}px Arial`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      const maxLen = actualSize < 300 ? 4 : (actualSize < 400 ? 5 : 6);
-      const text = prize.text.length > maxLen ? prize.text.substring(0, maxLen) + '...' : prize.text;
+      const maxLen = actualSize < 250 ? 3 : (actualSize < 300 ? 4 : (actualSize < 400 ? 5 : 6));
+      const text = prize.text.length > maxLen ? prize.text.substring(0, maxLen) + '..' : prize.text;
       const textOffset = prize.icon ? baseFontSize + 2 : 0;
       ctx.fillText(text, 0, textOffset);
       
@@ -160,6 +169,8 @@ class Turntable {
     ctx.arc(centerX, centerY, radius * 0.12, 0, 2 * Math.PI);
     ctx.fillStyle = '#667eea';
     ctx.fill();
+    
+    console.log(`转盘绘制完成: ${num}个奖品, 尺寸: ${actualSize}px`);
   }
 
   /**
@@ -226,6 +237,7 @@ class Turntable {
    */
   updatePrizes(prizes) {
     this.reset();
+    this.resizeCanvas();
     this.draw(prizes);
   }
 }

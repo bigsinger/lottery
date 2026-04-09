@@ -21,13 +21,11 @@ class ConfigManager {
       mode: this.mode,
       title: '幸运抽奖',
       prizes: [
-        { id: Utils.generateId(), text: '一等奖', icon: '🏆', color: '#e74c3c', weight: 1 },
-        { id: Utils.generateId(), text: '二等奖', icon: '🎁', color: '#e67e22', weight: 2 },
-        { id: Utils.generateId(), text: '三等奖', icon: '🎈', color: '#f1c40f', weight: 3 },
-        { id: Utils.generateId(), text: '谢谢参与', icon: '✨', color: '#95a5a6', weight: 10 }
+        { id: Utils.generateId(), text: '一等奖', icon: '🏆', color: '#e74c3c', weight: 10, maxWins: 1, winCount: 0 },
+        { id: Utils.generateId(), text: '二等奖', icon: '🎁', color: '#e67e22', weight: 20, maxWins: 1, winCount: 0 },
+        { id: Utils.generateId(), text: '三等奖', icon: '🎈', color: '#f1c40f', weight: 30, maxWins: 1, winCount: 0 },
+        { id: Utils.generateId(), text: '谢谢参与', icon: '✨', color: '#95a5a6', weight: 40, maxWins: 100, winCount: 0 }
       ],
-      blacklist: [],
-      whitelist: [],
       updatedAt: new Date().toISOString()
     };
   }
@@ -125,7 +123,13 @@ class ConfigManager {
       prize.color = Utils.getDefaultColor(config.prizes.length);
     }
     if (!prize.weight) {
-      prize.weight = 1;
+      prize.weight = 10;
+    }
+    if (!prize.maxWins) {
+      prize.maxWins = 1;
+    }
+    if (!prize.winCount) {
+      prize.winCount = 0;
     }
     config.prizes.push(prize);
     return config;
@@ -158,24 +162,60 @@ class ConfigManager {
   }
 
   /**
-   * 应用黑白名单过滤
+   * 清空所有奖品
    * @param {Object} config 当前配置
-   * @returns {Array} 过滤后的奖品列表
+   * @returns {Object} 更新后的配置
    */
-  applyFilters(config) {
-    let prizes = [...config.prizes];
-    
-    // 白名单优先：如果设置了白名单，只保留白名单中的奖品
-    if (config.whitelist && config.whitelist.length > 0) {
-      prizes = prizes.filter(p => config.whitelist.includes(p.id));
-    }
-    
-    // 黑名单：排除黑名单中的奖品
-    if (config.blacklist && config.blacklist.length > 0) {
-      prizes = prizes.filter(p => !config.blacklist.includes(p.id));
-    }
-    
-    return prizes;
+  clearPrizes(config) {
+    config.prizes = [];
+    return config;
+  }
+
+  /**
+   * 批量导入奖品
+   * @param {Object} config 当前配置
+   * @param {Array} names 名称列表
+   * @returns {Object} 更新后的配置
+   */
+  importPrizes(config, names) {
+    const icons = ['🎁', '🏆', '💰', '🎫', '🎮', '📱', '🍰', '✨', '🎈', '🌹', '💎', '🎯'];
+    config.prizes = names.map((name, index) => ({
+      id: Utils.generateId(),
+      text: name,
+      icon: icons[index % icons.length],
+      color: Utils.getDefaultColor(index),
+      weight: 10,
+      maxWins: 1,
+      winCount: 0
+    }));
+    return config;
+  }
+
+  /**
+   * 重置所有中奖次数
+   * @param {Object} config 当前配置
+   * @returns {Object} 更新后的配置
+   */
+  resetWinCounts(config) {
+    config.prizes.forEach(prize => {
+      prize.winCount = 0;
+    });
+    return config;
+  }
+
+  /**
+   * 获取可抽奖的奖品列表（排除已达到最大中奖次数的）
+   * @param {Object} config 当前配置
+   * @returns {Array} 可抽奖的奖品列表
+   */
+  getAvailablePrizes(config) {
+    return config.prizes.filter(prize => {
+      // 权重为0的不参与抽奖
+      if (prize.weight === 0) return false;
+      // 已达到最大中奖次数的不参与抽奖
+      if (prize.winCount >= prize.maxWins) return false;
+      return true;
+    });
   }
 }
 

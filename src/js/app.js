@@ -14,6 +14,7 @@ class LotteryApp {
     this.turntable = null;
     this.config = null;
     this.resizeTimeout = null;
+    this.editingPrizeId = null;
     
     // DOM 元素引用
     this.elements = {
@@ -25,7 +26,8 @@ class LotteryApp {
       helpBtn: null,
       settingModal: null,
       helpModal: null,
-      resultModal: null
+      resultModal: null,
+      importModal: null
     };
   }
 
@@ -64,6 +66,7 @@ class LotteryApp {
     this.elements.settingModal = document.getElementById('settingModal');
     this.elements.helpModal = document.getElementById('helpModal');
     this.elements.resultModal = document.getElementById('resultModal');
+    this.elements.importModal = document.getElementById('importModal');
   }
 
   /**
@@ -85,7 +88,6 @@ class LotteryApp {
     
     // 监听窗口大小变化
     window.addEventListener('resize', () => {
-      // 使用防抖处理
       clearTimeout(this.resizeTimeout);
       this.resizeTimeout = setTimeout(() => {
         this.turntable.resizeCanvas();
@@ -93,12 +95,22 @@ class LotteryApp {
       }, 200);
     });
     
-    // 监听页面加载完成（确保图片等资源加载后重新计算尺寸）
+    // 监听页面加载完成
     window.addEventListener('load', () => {
       setTimeout(() => {
         this.turntable.resizeCanvas();
         this.turntable.draw(this.config.prizes);
       }, 100);
+    });
+
+    // 监听 DOMContentLoaded
+    document.addEventListener('DOMContentLoaded', () => {
+      setTimeout(() => {
+        if (this.turntable) {
+          this.turntable.resizeCanvas();
+          this.turntable.draw(this.config.prizes);
+        }
+      }, 50);
     });
   }
 
@@ -108,7 +120,7 @@ class LotteryApp {
   bindEvents() {
     // 抽奖按钮
     if (this.elements.drawBtn) {
-      this.elements.drawBtn.addEventListener('click', () => this.draw());
+      this.elements.drawBtn.addEventListener('click', () => this.startDraw());
     }
     
     // 设置按钮
@@ -118,10 +130,10 @@ class LotteryApp {
     
     // 帮助按钮
     if (this.elements.helpBtn) {
-      this.elements.helpBtn.addEventListener('click', () => this.openHelpModal());
+      this.elements.helpBtn.addEventListener('click', () => this.openModal(this.elements.helpModal));
     }
     
-    // 关闭弹窗按钮
+    // 弹窗关闭按钮
     document.querySelectorAll('.modal-close').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const modal = e.target.closest('.modal-overlay');
@@ -129,7 +141,7 @@ class LotteryApp {
       });
     });
     
-    // 点击遮罩关闭弹窗
+    // 点击弹窗外部关闭
     document.querySelectorAll('.modal-overlay').forEach(modal => {
       modal.addEventListener('click', (e) => {
         if (e.target === modal) {
@@ -138,44 +150,62 @@ class LotteryApp {
       });
     });
     
-    // 保存配置按钮
-    const saveBtn = document.getElementById('saveConfigBtn');
-    if (saveBtn) {
-      saveBtn.addEventListener('click', () => this.saveConfig());
-    }
-    
-    // 重置配置按钮
-    const resetBtn = document.getElementById('resetConfigBtn');
-    if (resetBtn) {
-      resetBtn.addEventListener('click', () => this.resetConfig());
-    }
-    
     // 添加奖品按钮
     const addPrizeBtn = document.getElementById('addPrizeBtn');
     if (addPrizeBtn) {
-      addPrizeBtn.addEventListener('click', () => this.openPrizeEditor());
+      addPrizeBtn.addEventListener('click', () => this.addPrize());
     }
     
-    // 奖品编辑保存
+    // 清空奖品按钮
+    const clearPrizeBtn = document.getElementById('clearPrizeBtn');
+    if (clearPrizeBtn) {
+      clearPrizeBtn.addEventListener('click', () => this.clearPrizes());
+    }
+    
+    // 导入奖品按钮
+    const importPrizeBtn = document.getElementById('importPrizeBtn');
+    if (importPrizeBtn) {
+      importPrizeBtn.addEventListener('click', () => this.openImportModal());
+    }
+    
+    // 导入确认按钮
+    const importConfirmBtn = document.getElementById('importConfirmBtn');
+    if (importConfirmBtn) {
+      importConfirmBtn.addEventListener('click', () => this.confirmImport());
+    }
+    
+    // 奖品保存按钮
     const prizeSaveBtn = document.getElementById('prizeSaveBtn');
     if (prizeSaveBtn) {
       prizeSaveBtn.addEventListener('click', () => this.savePrizeEdit());
     }
     
-    // 奖品编辑取消
+    // 奖品取消按钮
     const prizeCancelBtn = document.getElementById('prizeCancelBtn');
     if (prizeCancelBtn) {
-      prizeCancelBtn.addEventListener('click', () => this.closePrizeEditor());
+      prizeCancelBtn.addEventListener('click', () => this.cancelPrizeEdit());
+    }
+    
+    // 配置保存按钮
+    const saveConfigBtn = document.getElementById('saveConfigBtn');
+    if (saveConfigBtn) {
+      saveConfigBtn.addEventListener('click', () => this.saveConfig());
+    }
+    
+    // 配置重置按钮
+    const resetConfigBtn = document.getElementById('resetConfigBtn');
+    if (resetConfigBtn) {
+      resetConfigBtn.addEventListener('click', () => this.resetWinCounts());
     }
     
     // 图标选择
     document.querySelectorAll('.icon-option').forEach(icon => {
-      icon.addEventListener('click', (e) => this.selectIcon(e));
+      icon.addEventListener('click', (e) => this.selectIcon(e.target.dataset.icon));
     });
     
     // 颜色选择
     document.querySelectorAll('.color-option').forEach(color => {
-      color.addEventListener('click', (e) => this.selectColor(e));
+      color.addEventListener('click', (e) => this.selectColor(e.target.dataset.color));
     });
   }
 
@@ -192,87 +222,19 @@ class LotteryApp {
     if (this.elements.modeIndicator) {
       this.elements.modeIndicator.textContent = `模式: ${this.mode}`;
     }
-  }
-
-  /**
-   * 执行抽奖
-   */
-  draw() {
-    if (this.turntable.isSpinning) {
-      return;
+    
+    // 更新转盘
+    if (this.turntable && this.config.prizes) {
+      this.turntable.draw(this.config.prizes);
     }
-    
-    // 应用黑白名单过滤
-    const filteredPrizes = this.configManager.applyFilters(this.config);
-    
-    if (filteredPrizes.length === 0) {
-      alert('没有可抽奖的奖品，请检查黑白名单设置');
-      return;
-    }
-    
-    // 禁用按钮
-    this.elements.drawBtn.disabled = true;
-    
-    // 计算中奖结果
-    const targetIndex = Utils.weightedRandom(filteredPrizes);
-    
-    // 执行转盘动画
-    this.turntable.spin(targetIndex, (prize) => {
-      // 显示结果
-      this.showResult(prize);
-      
-      // 保存历史
-      this.storage.saveHistory({
-        prize: prize.text,
-        prizeId: prize.id
-      });
-      
-      // 恢复按钮
-      this.elements.drawBtn.disabled = false;
-    });
-  }
-
-  /**
-   * 显示中奖结果
-   * @param {Object} prize 中奖奖品
-   */
-  showResult(prize) {
-    const resultModal = this.elements.resultModal;
-    if (!resultModal) return;
-    
-    // 更新结果内容
-    const resultIcon = resultModal.querySelector('.result-icon');
-    const resultPrize = resultModal.querySelector('.result-prize');
-    
-    if (resultIcon) {
-      resultIcon.textContent = prize.icon || '🎉';
-    }
-    
-    if (resultPrize) {
-      resultPrize.textContent = prize.text;
-    }
-    
-    // 显示弹窗
-    this.openModal(resultModal);
-    
-    // 3秒后自动关闭
-    setTimeout(() => {
-      this.closeModal(resultModal);
-    }, 3000);
   }
 
   /**
    * 打开设置弹窗
    */
   openSettingModal() {
-    const modal = this.elements.settingModal;
-    if (!modal) return;
-    
-    // 加载当前配置到表单
     this.loadConfigToForm();
-    
-    // 显示弹窗
-    this.openModal(modal);
+    this.openModal(this.elements.settingModal);
   }
 
   /**
@@ -287,9 +249,6 @@ class LotteryApp {
     
     // 奖品列表
     this.renderPrizeList();
-    
-    // 黑白名单列表
-    this.renderFilterList();
   }
 
   /**
@@ -301,28 +260,35 @@ class LotteryApp {
     
     prizeListEl.innerHTML = '';
     
+    if (this.config.prizes.length === 0) {
+      prizeListEl.innerHTML = '<div style="color: #999; padding: 20px; text-align: center;">暂无奖品，请添加或导入</div>';
+      return;
+    }
+    
     this.config.prizes.forEach((prize, index) => {
       const prizeItem = document.createElement('div');
       prizeItem.className = 'prize-item';
       prizeItem.dataset.id = prize.id;
       
-      // 检查黑白名单状态
-      const isBlacklisted = this.config.blacklist && this.config.blacklist.includes(prize.id);
-      const isWhitelisted = this.config.whitelist && this.config.whitelist.includes(prize.id);
-      const statusBadge = isWhitelisted ? '<span style="color: #2ecc71; font-size: 12px;">[白名单]</span>' : 
-                          isBlacklisted ? '<span style="color: #e74c3c; font-size: 12px;">[黑名单]</span>' : '';
+      // 中奖次数显示（大于0时才显示）
+      const winCountBadge = prize.winCount > 0 
+        ? `<div style="background: #2ecc71; color: #fff; padding: 2px 8px; border-radius: 12px; font-size: 12px; margin-right: 10px;">已抽${prize.winCount}次</div>` 
+        : '';
       
       prizeItem.innerHTML = `
         <div class="prize-color" style="background: ${prize.color || Utils.getDefaultColor(index)}">
           ${prize.icon || ''}
         </div>
         <div class="prize-info">
-          <div class="prize-name">${prize.text} ${statusBadge}</div>
-          <div class="prize-weight">权重: ${prize.weight || 1}</div>
+          <div class="prize-name">${prize.text}</div>
+          <div class="prize-weight">权重: ${prize.weight}% | 最大: ${prize.maxWins}次</div>
         </div>
-        <div class="prize-actions">
-          <button class="prize-btn prize-btn-edit" onclick="app.editPrize('${prize.id}')">编辑</button>
-          <button class="prize-btn prize-btn-delete" onclick="app.deletePrize('${prize.id}')">删除</button>
+        <div style="display: flex; align-items: center;">
+          ${winCountBadge}
+          <div class="prize-actions">
+            <button class="prize-btn prize-btn-edit" onclick="app.editPrize('${prize.id}')">编辑</button>
+            <button class="prize-btn prize-btn-delete" onclick="app.deletePrize('${prize.id}')">删除</button>
+          </div>
         </div>
       `;
       
@@ -331,114 +297,25 @@ class LotteryApp {
   }
 
   /**
-   * 渲染黑白名单列表
+   * 添加奖品
    */
-  renderFilterList() {
-    const filterListEl = document.getElementById('filterListContainer');
-    if (!filterListEl) return;
+  addPrize() {
+    this.editingPrizeId = null;
     
-    filterListEl.innerHTML = '';
-    
-    this.config.prizes.forEach((prize, index) => {
-      const filterItem = document.createElement('div');
-      filterItem.className = 'filter-item';
-      filterItem.style.cssText = 'display: flex; align-items: center; padding: 8px; gap: 15px; border-bottom: 1px solid #eee;';
-      
-      const isBlacklisted = this.config.blacklist && this.config.blacklist.includes(prize.id);
-      const isWhitelisted = this.config.whitelist && this.config.whitelist.includes(prize.id);
-      
-      filterItem.innerHTML = `
-        <div style="width: 24px; height: 24px; border-radius: 50%; background: ${prize.color || Utils.getDefaultColor(index)}; display: flex; align-items: center; justify-content: center; font-size: 14px;">
-          ${prize.icon || ''}
-        </div>
-        <div style="flex: 1; font-size: 14px;">${prize.text}</div>
-        <div style="display: flex; gap: 10px; align-items: center;">
-          <label style="display: flex; align-items: center; gap: 3px; font-size: 12px; color: #e74c3c;">
-            <input type="checkbox" class="blacklist-checkbox" data-prize-id="${prize.id}" ${isBlacklisted ? 'checked' : ''}>
-            黑名单
-          </label>
-          <label style="display: flex; align-items: center; gap: 3px; font-size: 12px; color: #2ecc71;">
-            <input type="checkbox" class="whitelist-checkbox" data-prize-id="${prize.id}" ${isWhitelisted ? 'checked' : ''}>
-            白名单
-          </label>
-        </div>
-      `;
-      
-      filterListEl.appendChild(filterItem);
-    });
-    
-    // 绑定黑白名单勾选事件
-    filterListEl.querySelectorAll('.blacklist-checkbox').forEach(checkbox => {
-      checkbox.addEventListener('change', (e) => this.handleBlacklistChange(e));
-    });
-    
-    filterListEl.querySelectorAll('.whitelist-checkbox').forEach(checkbox => {
-      checkbox.addEventListener('change', (e) => this.handleWhitelistChange(e));
-    });
-  }
-
-  /**
-   * 处理黑名单勾选变化
-   */
-  handleBlacklistChange(e) {
-    const prizeId = e.target.dataset.prizeId;
-    const isChecked = e.target.checked;
-    
-    if (!this.config.blacklist) {
-      this.config.blacklist = [];
+    // 显示编辑器
+    const editor = document.getElementById('prizeEditor');
+    if (editor) {
+      editor.style.display = 'block';
     }
     
-    if (isChecked) {
-      // 添加到黑名单，同时从白名单移除
-      if (!this.config.blacklist.includes(prizeId)) {
-        this.config.blacklist.push(prizeId);
-      }
-      this.config.whitelist = this.config.whitelist.filter(id => id !== prizeId);
-      
-      // 取消对应的白名单勾选
-      const whitelistCheckbox = document.querySelector(`.whitelist-checkbox[data-prize-id="${prizeId}"]`);
-      if (whitelistCheckbox) {
-        whitelistCheckbox.checked = false;
-      }
-    } else {
-      // 从黑名单移除
-      this.config.blacklist = this.config.blacklist.filter(id => id !== prizeId);
-    }
+    // 清空表单
+    document.getElementById('prizeName').value = '';
+    document.getElementById('prizeWeight').value = '10';
+    document.getElementById('prizeMaxWins').value = '1';
     
-    // 更新奖品列表显示
-    this.renderPrizeList();
-  }
-
-  /**
-   * 处理白名单勾选变化
-   */
-  handleWhitelistChange(e) {
-    const prizeId = e.target.dataset.prizeId;
-    const isChecked = e.target.checked;
-    
-    if (!this.config.whitelist) {
-      this.config.whitelist = [];
-    }
-    
-    if (isChecked) {
-      // 添加到白名单，同时从黑名单移除
-      if (!this.config.whitelist.includes(prizeId)) {
-        this.config.whitelist.push(prizeId);
-      }
-      this.config.blacklist = this.config.blacklist.filter(id => id !== prizeId);
-      
-      // 取消对应的黑名单勾选
-      const blacklistCheckbox = document.querySelector(`.blacklist-checkbox[data-prize-id="${prizeId}"]`);
-      if (blacklistCheckbox) {
-        blacklistCheckbox.checked = false;
-      }
-    } else {
-      // 从白名单移除
-      this.config.whitelist = this.config.whitelist.filter(id => id !== prizeId);
-    }
-    
-    // 更新奖品列表显示
-    this.renderPrizeList();
+    // 设置默认图标和颜色
+    this.selectIcon('🎁');
+    this.selectColor(Utils.getDefaultColor(this.config.prizes.length));
   }
 
   /**
@@ -449,8 +326,22 @@ class LotteryApp {
     const prize = this.config.prizes.find(p => p.id === prizeId);
     if (!prize) return;
     
-    // 打开编辑弹窗
-    this.openPrizeEditor(prize);
+    this.editingPrizeId = prizeId;
+    
+    // 显示编辑器
+    const editor = document.getElementById('prizeEditor');
+    if (editor) {
+      editor.style.display = 'block';
+    }
+    
+    // 填充表单
+    document.getElementById('prizeName').value = prize.text;
+    document.getElementById('prizeWeight').value = prize.weight || 10;
+    document.getElementById('prizeMaxWins').value = prize.maxWins || 1;
+    
+    // 设置图标和颜色
+    this.selectIcon(prize.icon || '🎁');
+    this.selectColor(prize.color || Utils.getDefaultColor(0));
   }
 
   /**
@@ -458,61 +349,154 @@ class LotteryApp {
    * @param {string} prizeId 奖品 ID
    */
   deletePrize(prizeId) {
-    if (this.config.prizes.length <= 1) {
-      alert('至少需要保留一个奖品');
+    if (!confirm('确定要删除这个奖品吗？')) return;
+    
+    this.configManager.deletePrize(this.config, prizeId);
+    this.renderPrizeList();
+    
+    // 隐藏编辑器
+    const editor = document.getElementById('prizeEditor');
+    if (editor) {
+      editor.style.display = 'none';
+    }
+  }
+
+  /**
+   * 清空所有奖品
+   */
+  clearPrizes() {
+    if (!confirm('确定要清空所有奖品吗？此操作不可撤销。')) return;
+    
+    this.configManager.clearPrizes(this.config);
+    this.renderPrizeList();
+    
+    // 隐藏编辑器
+    const editor = document.getElementById('prizeEditor');
+    if (editor) {
+      editor.style.display = 'none';
+    }
+  }
+
+  /**
+   * 打开导入弹窗
+   */
+  openImportModal() {
+    const importText = document.getElementById('importText');
+    if (importText) {
+      importText.value = '';
+    }
+    this.openModal(this.elements.importModal);
+  }
+
+  /**
+   * 关闭导入弹窗
+   */
+  closeImportModal() {
+    this.closeModal(this.elements.importModal);
+  }
+
+  /**
+   * 确认导入
+   */
+  confirmImport() {
+    const importText = document.getElementById('importText');
+    if (!importText) return;
+    
+    const text = importText.value.trim();
+    if (!text) {
+      alert('请输入抽奖名称列表');
       return;
     }
     
-    // 确认删除
-    if (confirm('确定要删除这个奖品吗？')) {
-      this.config = this.configManager.deletePrize(this.config, prizeId);
-      this.renderPrizeList();
+    // 解析输入（每行一个名称）
+    const names = text.split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 0 && line.length <= 10);
+    
+    if (names.length === 0) {
+      alert('没有有效的抽奖名称，每行不超过10个字');
+      return;
+    }
+    
+    // 导入奖品
+    this.configManager.importPrizes(this.config, names);
+    this.renderPrizeList();
+    
+    // 关闭导入弹窗
+    this.closeImportModal();
+    
+    // 隐藏编辑器
+    const editor = document.getElementById('prizeEditor');
+    if (editor) {
+      editor.style.display = 'none';
     }
   }
 
   /**
-   * 打开奖品编辑弹窗
-   * @param {Object} prize 现有奖品（编辑模式）或 null（添加模式）
+   * 保存奖品编辑
    */
-  openPrizeEditor(prize = null) {
-    const editor = document.getElementById('prizeEditor');
-    if (!editor) return;
+  savePrizeEdit() {
+    const name = document.getElementById('prizeName').value.trim();
+    const weight = parseInt(document.getElementById('prizeWeight').value) || 10;
+    const maxWins = parseInt(document.getElementById('prizeMaxWins').value) || 1;
     
-    // 设置编辑模式
-    this.editingPrizeId = prize ? prize.id : null;
+    // 验证
+    if (!name) {
+      alert('请输入抽奖名称');
+      return;
+    }
     
-    // 加载奖品数据
-    const nameInput = document.getElementById('prizeName');
-    const weightInput = document.getElementById('prizeWeight');
+    if (weight < 0 || weight > 100) {
+      alert('权重必须在 0-100 之间');
+      return;
+    }
+    
+    if (maxWins < 1) {
+      alert('最大中奖次数必须大于 0');
+      return;
+    }
+    
+    // 获取选中的图标和颜色
     const iconPreview = document.getElementById('iconPreview');
     const colorPreview = document.getElementById('colorPreview');
+    const icon = iconPreview ? iconPreview.textContent : '🎁';
+    const color = colorPreview ? colorPreview.style.background : Utils.getDefaultColor(0);
     
-    if (nameInput) {
-      nameInput.value = prize ? prize.text : '';
+    if (this.editingPrizeId) {
+      // 更新现有奖品
+      this.configManager.updatePrize(this.config, this.editingPrizeId, {
+        text: name,
+        icon: icon,
+        color: color,
+        weight: weight,
+        maxWins: maxWins
+      });
+    } else {
+      // 添加新奖品
+      this.configManager.addPrize(this.config, {
+        text: name,
+        icon: icon,
+        color: color,
+        weight: weight,
+        maxWins: maxWins,
+        winCount: 0
+      });
     }
     
-    if (weightInput) {
-      weightInput.value = prize ? (prize.weight || 1) : 1;
-    }
+    // 更新列表
+    this.renderPrizeList();
     
-    if (iconPreview) {
-      iconPreview.textContent = prize ? (prize.icon || '') : '';
-      iconPreview.dataset.icon = prize ? (prize.icon || '') : '';
+    // 隐藏编辑器
+    const editor = document.getElementById('prizeEditor');
+    if (editor) {
+      editor.style.display = 'none';
     }
-    
-    if (colorPreview) {
-      colorPreview.style.background = prize ? (prize.color || Utils.getDefaultColor(0)) : Utils.getDefaultColor(0);
-      colorPreview.dataset.color = prize ? (prize.color || Utils.getDefaultColor(0)) : Utils.getDefaultColor(0);
-    }
-    
-    // 显示编辑器
-    editor.style.display = 'block';
   }
 
   /**
-   * 关闭奖品编辑弹窗
+   * 取消奖品编辑
    */
-  closePrizeEditor() {
+  cancelPrizeEdit() {
     const editor = document.getElementById('prizeEditor');
     if (editor) {
       editor.style.display = 'none';
@@ -521,84 +505,125 @@ class LotteryApp {
   }
 
   /**
-   * 保存奖品编辑
-   */
-  savePrizeEdit() {
-    const nameInput = document.getElementById('prizeName');
-    const weightInput = document.getElementById('prizeWeight');
-    const iconPreview = document.getElementById('iconPreview');
-    const colorPreview = document.getElementById('colorPreview');
-    
-    const name = nameInput ? nameInput.value.trim() : '';
-    const weight = weightInput ? parseInt(weightInput.value) || 1 : 1;
-    const icon = iconPreview ? iconPreview.dataset.icon : '';
-    const color = colorPreview ? colorPreview.dataset.color : Utils.getDefaultColor(0);
-    
-    if (!name) {
-      alert('请输入奖品名称');
-      return;
-    }
-    
-    const prizeData = {
-      text: name,
-      weight: weight,
-      icon: icon,
-      color: color
-    };
-    
-    if (this.editingPrizeId) {
-      // 编辑模式
-      this.config = this.configManager.updatePrize(this.config, this.editingPrizeId, prizeData);
-    } else {
-      // 添加模式
-      this.config = this.configManager.addPrize(this.config, prizeData);
-    }
-    
-    // 更新列表
-    this.renderPrizeList();
-    
-    // 关闭编辑器
-    this.closePrizeEditor();
-  }
-
-  /**
    * 选择图标
-   * @param {Event} e 点击事件
+   * @param {string} icon 图标
    */
-  selectIcon(e) {
-    const icon = e.target.dataset.icon;
-    const preview = document.getElementById('iconPreview');
-    
-    if (preview) {
-      preview.textContent = icon;
-      preview.dataset.icon = icon;
+  selectIcon(icon) {
+    const iconPreview = document.getElementById('iconPreview');
+    if (iconPreview) {
+      iconPreview.textContent = icon;
     }
     
-    // 更新选中状态
+    // 高亮选中的图标
     document.querySelectorAll('.icon-option').forEach(el => {
-      el.classList.remove('selected');
+      el.style.background = el.dataset.icon === icon ? '#e0e0e0' : 'transparent';
     });
-    e.target.classList.add('selected');
   }
 
   /**
    * 选择颜色
-   * @param {Event} e 点击事件
+   * @param {string} color 颜色
    */
-  selectColor(e) {
-    const color = e.target.dataset.color;
-    const preview = document.getElementById('colorPreview');
-    
-    if (preview) {
-      preview.style.background = color;
-      preview.dataset.color = color;
+  selectColor(color) {
+    const colorPreview = document.getElementById('colorPreview');
+    if (colorPreview) {
+      colorPreview.style.background = color;
     }
     
-    // 更新选中状态
+    // 高亮选中的颜色
     document.querySelectorAll('.color-option').forEach(el => {
-      el.classList.remove('selected');
+      el.style.border = el.dataset.color === color ? '3px solid #333' : '2px solid transparent';
     });
-    e.target.classList.add('selected');
+  }
+
+  /**
+   * 开始抽奖
+   */
+  startDraw() {
+    // 获取可抽奖的奖品列表
+    const availablePrizes = this.configManager.getAvailablePrizes(this.config);
+    
+    if (availablePrizes.length === 0) {
+      alert('没有可抽奖的奖品了！请重置中奖次数或添加更多奖品。');
+      return;
+    }
+    
+    // 根据权重选择奖品
+    const targetPrize = this.selectPrizeByWeight(availablePrizes);
+    const targetIndex = this.config.prizes.findIndex(p => p.id === targetPrize.id);
+    
+    // 开始旋转
+    this.turntable.spin(targetIndex, (prize) => {
+      // 更新中奖次数
+      const prizeData = this.config.prizes.find(p => p.id === prize.id);
+      if (prizeData) {
+        prizeData.winCount = (prizeData.winCount || 0) + 1;
+      }
+      
+      // 显示结果
+      this.showResult(prize);
+      
+      // 保存配置
+      this.configManager.saveConfig(this.config);
+      
+      // 更新转盘显示
+      this.turntable.draw(this.config.prizes);
+    });
+  }
+
+  /**
+   * 根据权重选择奖品
+   * @param {Array} prizes 奖品列表
+   * @returns {Object} 选中的奖品
+   */
+  selectPrizeByWeight(prizes) {
+    // 计算总权重
+    const totalWeight = prizes.reduce((sum, p) => sum + (p.weight || 10), 0);
+    
+    // 如果有权重为100的奖品，直接返回
+    const guaranteedPrize = prizes.find(p => p.weight === 100);
+    if (guaranteedPrize) {
+      return guaranteedPrize;
+    }
+    
+    // 随机选择
+    let random = Math.random() * totalWeight;
+    for (const prize of prizes) {
+      random -= (prize.weight || 10);
+      if (random <= 0) {
+        return prize;
+      }
+    }
+    
+    // 默认返回最后一个
+    return prizes[prizes.length - 1];
+  }
+
+  /**
+   * 显示抽奖结果
+   * @param {Object} prize 奖品
+   */
+  showResult(prize) {
+    const resultModal = this.elements.resultModal;
+    if (!resultModal) return;
+    
+    const prizeEl = resultModal.querySelector('.result-prize');
+    const iconEl = resultModal.querySelector('.result-icon');
+    
+    if (prizeEl) {
+      prizeEl.textContent = prize.text;
+    }
+    
+    if (iconEl) {
+      iconEl.textContent = prize.icon || '🎉';
+    }
+    
+    this.openModal(resultModal);
+    
+    // 3秒后自动关闭
+    setTimeout(() => {
+      this.closeModal(resultModal);
+    }, 3000);
   }
 
   /**
@@ -611,14 +636,6 @@ class LotteryApp {
       this.config.title = titleInput.value.trim() || '幸运抽奖';
     }
     
-    // 确保黑白名单已初始化
-    if (!this.config.blacklist) {
-      this.config.blacklist = [];
-    }
-    if (!this.config.whitelist) {
-      this.config.whitelist = [];
-    }
-    
     // 保存配置
     if (this.configManager.saveConfig(this.config)) {
       // 更新界面
@@ -627,9 +644,7 @@ class LotteryApp {
       // 更新转盘
       this.turntable.updatePrizes(this.config.prizes);
       
-      // 关闭弹窗
-      this.closeModal(this.elements.settingModal);
-      
+      // 不关闭弹窗，只显示提示
       alert('配置已保存');
     } else {
       alert('配置保存失败，请检查浏览器是否支持 localStorage');
@@ -637,34 +652,19 @@ class LotteryApp {
   }
 
   /**
-   * 重置配置
+   * 重置中奖次数
    */
-  resetConfig() {
-    if (confirm('确定要重置为默认配置吗？所有自定义设置将丢失。')) {
-      this.config = this.configManager.resetConfig();
-      
-      // 更新界面
-      this.updateUI();
-      this.loadConfigToForm();
-      
-      // 更新转盘
-      this.turntable.updatePrizes(this.config.prizes);
-      
-      // 关闭弹窗
-      this.closeModal(this.elements.settingModal);
-      
-      alert('配置已重置');
-    }
-  }
-
-  /**
-   * 打开帮助弹窗
-   */
-  openHelpModal() {
-    const modal = this.elements.helpModal;
-    if (modal) {
-      this.openModal(modal);
-    }
+  resetWinCounts() {
+    if (!confirm('确定要重置所有中奖次数吗？这将开始新一轮抽奖。')) return;
+    
+    this.configManager.resetWinCounts(this.config);
+    this.renderPrizeList();
+    
+    // 更新转盘
+    this.turntable.updatePrizes(this.config.prizes);
+    
+    // 不关闭弹窗
+    alert('中奖次数已重置');
   }
 
   /**
@@ -674,6 +674,16 @@ class LotteryApp {
   openModal(modal) {
     if (modal) {
       modal.classList.add('active');
+      
+      // 重新绘制转盘（如果是设置弹窗）
+      if (modal.id === 'settingModal') {
+        setTimeout(() => {
+          if (this.turntable) {
+            this.turntable.resizeCanvas();
+            this.turntable.draw(this.config.prizes);
+          }
+        }, 100);
+      }
     }
   }
 
@@ -684,22 +694,20 @@ class LotteryApp {
   closeModal(modal) {
     if (modal) {
       modal.classList.remove('active');
+      
+      // 隐藏奖品编辑器
+      const editor = document.getElementById('prizeEditor');
+      if (editor) {
+        editor.style.display = 'none';
+      }
     }
   }
 }
 
 // 创建全局实例
-let app;
+const app = new LotteryApp();
 
 // 页面加载完成后初始化
 document.addEventListener('DOMContentLoaded', () => {
-  app = new LotteryApp();
   app.init();
 });
-
-// 导出
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = LotteryApp;
-} else {
-  window.LotteryApp = LotteryApp;
-}

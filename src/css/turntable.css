@@ -6,6 +6,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
+  min-width: 150px;
 }
 
 .turntable-container {
@@ -13,6 +14,8 @@
   width: 100%;
   aspect-ratio: 1;
   max-width: 100%;
+  min-width: 150px;
+  min-height: 150px;
 }
 
 .turntable-canvas {
@@ -23,6 +26,7 @@
     0 0 0 10px rgba(255, 255, 255, 0.3),
     0 0 0 15px rgba(255, 255, 255, 0.1),
     0 10px 30px rgba(0, 0, 0, 0.3);
+  display: block;
 }
 
 .turntable-pointer {
@@ -66,6 +70,13 @@
 @media (max-width: 480px) {
   .turntable-wrapper {
     width: calc(100vw - 30px);
+    max-width: 280px;
+    min-width: 200px;
+  }
+  
+  .turntable-container {
+    min-width: 200px;
+    min-height: 200px;
   }
   
   .turntable-center {
@@ -78,6 +89,20 @@
     border-left: 12px solid transparent;
     border-right: 12px solid transparent;
     border-top: 25px solid #f5576c;
+  }
+}
+
+/* 额外的手机端修复 */
+@media (max-width: 360px) {
+  .turntable-wrapper {
+    width: calc(100vw - 40px);
+    max-width: 240px;
+    min-width: 180px;
+  }
+  
+  .turntable-container {
+    min-width: 180px;
+    min-height: 180px;
   }
 }
 
