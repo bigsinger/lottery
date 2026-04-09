@@ -389,6 +389,7 @@ This file stores important information that should persist across sessions.
 ### 抽奖转盘应用
 
 **项目路径**: `F:\bigsinger\lottery`
+**仓库地址**: https://github.com/bigsinger/lottery
 
 **核心功能**:
 - 支持两种场景：抽奖品和抽人（公司/班级批量人员名单）
@@ -402,8 +403,25 @@ This file stores important information that should persist across sessions.
 - 重置按钮仅重置中奖次数为0，不关闭设置对话框；保存按钮也不关闭对话框
 - 添加"清空"和"导入"按钮，支持批量粘贴导入抽奖名称（每行一个，不超过10字）
 
-**已解决问题**:
-- 手机端转盘奖项不渲染问题（优化Canvas尺寸计算、添加最小尺寸约束、改进DPR处理）
+**用户偏好**:
+- Git工作流：使用本地git安装直接commit和push
+- 项目结构：JS文件统一放在js目录，不分散存放
+- 示例文件：user目录仅保留一个示例文件，额外文档写在README.md
+- 转盘动画：先播放动画再显示结果，不要直接显示结果
+- 重置按钮：仅重置中奖次数，不影响奖品配置
+- 保存按钮：保存但不关闭设置对话框
+- 版本检查：对照doc/*.md确保功能不退化
+- 问题修复：参考之前的工作方式，避免影响其他功能
+
+**技术方案**:
+- commit.bat：处理中文提交信息的编码问题
+- PHP后端：通过`?user=xxx`参数实现多设备配置同步，部署需要PHP服务器且user/目录可写
+- 指针错位修复：绘图代码和旋转计算都从顶部顺时针开始
+- 浏览器抖动修复：CSS transform-origin: center center + will-change: transform
+- 转盘渲染不全修复：优化备用尺寸计算（最小250px，按屏幕宽度分级）+ draw()中添加尺寸验证触发重算
+
+**错误信息**:
+- 奖品抽完提示："全部抽完，请重置抽奖结果重新开始。"
 
 **项目状态**: 工程基本完工，后续小问题再沟通（2026-04-09）
 

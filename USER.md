@@ -28,3 +28,4 @@ Information about the user goes here.
 - yidun-gongdan execution: 流水线式执行，每个产品分析完成并发送邮件后再处理下一个
 - Statistics: prefers not to include statistics that add maintenance burden without clear value
 - YouTube monitoring: rate limit optimization deferred for later
+- Git workflow: prefers direct git commit and push using local git installation
