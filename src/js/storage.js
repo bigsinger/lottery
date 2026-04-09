@@ -3,6 +3,11 @@
  * 支持本地存储和服务端存储
  * - 无 user 参数：使用 localStorage（本地存储）
  * - 有 user 参数：使用服务端 API（多设备同步）
+ * 
+ * 数据结构说明：
+ * - user 参数：指定 JSON 配置文件名（如 user/张三.json）
+ * - mode 参数：指定在该 JSON 中使用哪个 mode 配置
+ * - 一个 user 的 JSON 文件可以包含多个 mode 配置
  */
 
 /**
@@ -197,12 +202,22 @@ class LocalStorageManager {
 /**
  * 服务端存储管理器
  * 使用 PHP API 实现多设备同步
+ * 
+ * 数据结构：一个 user 的 JSON 文件包含多个 mode 配置
+ * {
+ *   "user": "张三",
+ *   "modes": {
+ *     "default": { "title": "...", "prizes": [...], "updatedAt": "..." },
+ *     "team1": { "title": "...", "prizes": [...], "updatedAt": "..." }
+ *   },
+ *   "updatedAt": "..."
+ * }
  */
 class ServerStorageManager {
   /**
    * 构造函数
-   * @param {string} user 用户标识
-   * @param {string} mode 模式名称
+   * @param {string} user 用户标识（JSON 文件名）
+   * @param {string} mode 模式名称（在该 JSON 中使用的配置）
    */
   constructor(user, mode) {
     this.user = user;
@@ -232,6 +247,7 @@ class ServerStorageManager {
 
   /**
    * 保存配置到服务器
+   * 逻辑：读取整个 JSON，更新/添加指定 mode 的配置，保存整个 JSON
    * @param {Object} config 配置对象
    * @returns {Promise<boolean>} 是否成功
    */
@@ -267,11 +283,13 @@ class ServerStorageManager {
 
   /**
    * 从服务器加载配置
+   * 逻辑：读取整个 JSON，返回指定 mode 的配置
+   * 如果 mode 不存在，返回 null（保存时会自动创建）
    * @returns {Promise<Object|null>} 配置对象
    */
   async loadConfig() {
     try {
-      const response = await fetch(`${this.apiBase}/load.php?user=${encodeURIComponent(this.user)}`);
+      const response = await fetch(`${this.apiBase}/load.php?user=${encodeURIComponent(this.user)}&mode=${encodeURIComponent(this.mode)}`);
       const result = await response.json();
 
       if (!response.ok || !result.success) {
@@ -284,7 +302,12 @@ class ServerStorageManager {
         return null;
       }
 
-      console.log('配置已从服务器加载');
+      if (!result.modeExists) {
+        console.log(`模式 ${this.mode} 不存在，将使用默认配置，保存时自动创建`);
+        return null;
+      }
+
+      console.log(`配置已从服务器加载，模式: ${this.mode}`);
       return result.config;
     } catch (e) {
       console.error('加载配置失败:', e);
@@ -373,8 +396,8 @@ class ServerStorageManager {
 class StorageManager {
   /**
    * 构造函数
-   * @param {string} user 用户标识（可选）
-   * @param {string} mode 模式名称
+   * @param {string} user 用户标识（可选，指定 JSON 文件名）
+   * @param {string} mode 模式名称（在该 JSON 中使用的配置）
    */
   constructor(user, mode) {
     // 根据是否有 user 参数选择存储方式
